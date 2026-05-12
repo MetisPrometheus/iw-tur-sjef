@@ -11,8 +11,7 @@ import Header from "@/components/Header";
 import StopList from "@/components/StopList";
 import SlotPanel from "@/components/SlotPanel";
 import TripMap from "@/components/TripMap";
-
-type MobileTab = "route" | "slot" | "map";
+import ViewToggle, { type ViewMode } from "@/components/ViewToggle";
 
 export default function TripClient({
   slug,
@@ -25,7 +24,7 @@ export default function TripClient({
   const [name, setNameState] = useState<string | null>(null);
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
-  const [mobileTab, setMobileTab] = useState<MobileTab>("route");
+  const [view, setView] = useState<ViewMode>("route");
 
   useEffect(() => {
     setClientId(getClientId());
@@ -88,8 +87,15 @@ export default function TripClient({
 
   function pickSlot(id: string) {
     setActiveSlotId(id);
-    setMobileTab("slot");
+    setView("slot");
   }
+
+  const badges = {
+    route: data.stops.length,
+    slot: activeSlot
+      ? data.suggestions.filter((s) => s.slot_id === activeSlot.id).length
+      : 0,
+  };
 
   return (
     <div className="flex h-[100dvh] flex-col bg-soft">
@@ -108,12 +114,16 @@ export default function TripClient({
         }}
       />
 
-      {/* Panes. On mobile only one is visible at a time (via the tab bar). On md+, all three are side-by-side. */}
-      <div className="flex-1 overflow-hidden md:grid md:grid-cols-[320px_minmax(0,1fr)_minmax(0,1fr)] lg:grid-cols-[340px_minmax(0,1fr)_minmax(0,520px)]">
+      {/* Mobile-only view toggle, just under the header. */}
+      <div className="flex shrink-0 justify-center border-b border-line bg-white px-4 py-2 md:hidden">
+        <ViewToggle value={view} onChange={setView} badges={badges} />
+      </div>
+
+      <div className="relative flex-1 overflow-hidden md:grid md:grid-cols-[280px_minmax(0,1fr)_minmax(380px,1fr)] lg:grid-cols-[300px_minmax(0,1fr)_minmax(520px,1.2fr)]">
         <aside
           className={clsx(
             "h-full overflow-y-auto border-line bg-white md:border-r",
-            mobileTab === "route" ? "block" : "hidden md:block",
+            view === "route" ? "block" : "hidden md:block",
           )}
         >
           <StopList
@@ -128,7 +138,7 @@ export default function TripClient({
         <section
           className={clsx(
             "h-full overflow-y-auto bg-white md:bg-soft",
-            mobileTab === "slot" ? "block" : "hidden md:block",
+            view === "slot" ? "block" : "hidden md:block",
           )}
         >
           <SlotPanel
@@ -142,71 +152,13 @@ export default function TripClient({
 
         <section
           className={clsx(
-            "h-full overflow-hidden border-line md:border-l",
-            mobileTab === "map" ? "block" : "hidden md:block",
+            "relative h-full overflow-hidden border-line md:border-l",
+            view === "map" ? "block" : "hidden md:block",
           )}
         >
           <TripMap bundle={data} activeSlotId={activeSlotId} />
         </section>
       </div>
-
-      {/* Mobile bottom tab bar. */}
-      <nav className="flex shrink-0 border-t border-line bg-white md:hidden">
-        <MobileTabBtn
-          active={mobileTab === "route"}
-          onClick={() => setMobileTab("route")}
-          icon="◆"
-          label="Route"
-          badge={data.stops.length}
-        />
-        <MobileTabBtn
-          active={mobileTab === "slot"}
-          onClick={() => setMobileTab("slot")}
-          icon="✦"
-          label={activeSlot ? "Slot" : "Pick"}
-        />
-        <MobileTabBtn
-          active={mobileTab === "map"}
-          onClick={() => setMobileTab("map")}
-          icon="◉"
-          label="Map"
-        />
-      </nav>
     </div>
-  );
-}
-
-function MobileTabBtn({
-  active,
-  onClick,
-  icon,
-  label,
-  badge,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: string;
-  label: string;
-  badge?: number;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={clsx(
-        "relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium",
-        active ? "text-ink" : "text-muted",
-      )}
-    >
-      <span className="text-base leading-none">{icon}</span>
-      <span>{label}</span>
-      {badge !== undefined && badge > 0 && (
-        <span className="absolute right-[28%] top-1.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-ink px-1 text-[9px] font-bold text-white">
-          {badge}
-        </span>
-      )}
-      {active && (
-        <span className="absolute inset-x-6 top-0 h-0.5 rounded-b bg-ink" />
-      )}
-    </button>
   );
 }

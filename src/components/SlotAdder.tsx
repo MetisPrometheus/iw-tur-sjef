@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { SLOT_KINDS, SLOT_LABEL, type SlotKind } from "@/lib/types";
+import clsx from "clsx";
+import {
+  SLOT_KINDS,
+  SLOT_LABEL,
+  SLOT_EMOJI,
+  SLOT_COLOR,
+  type SlotKind,
+} from "@/lib/types";
 
 export default function SlotAdder({
   stopId,
@@ -39,6 +46,7 @@ export default function SlotAdder({
     setLabel("");
     setFrom("");
     setTo("");
+    setKind("lunch");
     onAdded();
   }
 
@@ -46,7 +54,7 @@ export default function SlotAdder({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="mt-2 w-full rounded-md border border-dashed border-line px-2 py-1 text-[11px] text-muted hover:border-brand hover:bg-brand-tint hover:text-brand-dark"
+        className="mt-2 w-full rounded-md border border-dashed border-line px-2 py-1.5 text-[11px] font-medium text-muted transition active:scale-[0.98] hover:border-brand hover:bg-brand-tint hover:text-brand-dark"
       >
         + Add to a day
       </button>
@@ -54,71 +62,85 @@ export default function SlotAdder({
   }
 
   return (
-    <div className="mt-2 rounded-md border border-line bg-white p-2 text-xs">
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        className="w-full rounded-md border border-line bg-soft px-2 py-1 outline-none focus:border-brand focus:bg-white"
-      />
-      <div className="mt-2 flex gap-1.5">
-        <select
-          value={kind}
-          onChange={(e) => setKind(e.target.value as SlotKind)}
-          className="flex-1 rounded-md border border-line bg-soft px-2 py-1 outline-none focus:border-brand focus:bg-white"
-        >
-          {SLOT_KINDS.map((k) => (
-            <option key={k} value={k}>
-              {SLOT_LABEL[k]}
-            </option>
-          ))}
-        </select>
-        <input
-          type="number"
-          min={1}
-          max={10}
-          value={capacity}
-          onChange={(e) => setCapacity(Number(e.target.value))}
-          title="How many winners?"
-          className="w-12 rounded-md border border-line bg-soft px-2 py-1 text-center outline-none focus:border-brand focus:bg-white"
-        />
+    <div className="mt-2 rounded-lg border border-line bg-white p-3 text-xs shadow-card">
+      <div className="grid grid-cols-4 gap-1.5">
+        {SLOT_KINDS.map((k) => (
+          <button
+            key={k}
+            onClick={() => setKind(k)}
+            className={clsx(
+              "flex flex-col items-center gap-0.5 rounded-lg border px-1 py-2 text-[10px] font-medium transition active:scale-[0.96]",
+              kind === k
+                ? "border-transparent text-white shadow-card"
+                : "border-line bg-soft text-muted hover:border-ink hover:text-ink",
+            )}
+            style={kind === k ? { background: SLOT_COLOR[k] } : undefined}
+            title={SLOT_LABEL[k]}
+          >
+            <span className="text-base leading-none">{SLOT_EMOJI[k]}</span>
+            <span className="truncate">{SLOT_LABEL[k]}</span>
+          </button>
+        ))}
       </div>
-      <div className="mt-2 flex gap-1.5">
-        <input
-          type="time"
-          value={from}
-          onChange={(e) => setFrom(e.target.value)}
-          placeholder="from"
-          className="flex-1 rounded-md border border-line bg-soft px-2 py-1 outline-none focus:border-brand focus:bg-white"
-        />
-        <input
-          type="time"
-          value={to}
-          onChange={(e) => setTo(e.target.value)}
-          placeholder="to"
-          className="flex-1 rounded-md border border-line bg-soft px-2 py-1 outline-none focus:border-brand focus:bg-white"
-        />
-      </div>
+
       {kind === "custom" && (
         <input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="label (e.g. 'museum stop')"
           maxLength={60}
-          className="mt-2 w-full rounded-md border border-line bg-soft px-2 py-1 outline-none focus:border-brand focus:bg-white"
+          className="mt-2 w-full rounded-md border border-line bg-soft px-2 py-1.5 outline-none focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/20"
         />
       )}
+
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        className="mt-2 w-full rounded-md border border-line bg-soft px-2 py-1.5 outline-none focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/20"
+      />
+
+      <div className="mt-2 grid grid-cols-3 gap-1.5">
+        <input
+          type="time"
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+          placeholder="from"
+          className="rounded-md border border-line bg-soft px-2 py-1.5 outline-none focus:border-brand focus:bg-white"
+        />
+        <input
+          type="time"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          placeholder="to"
+          className="rounded-md border border-line bg-soft px-2 py-1.5 outline-none focus:border-brand focus:bg-white"
+        />
+        <div className="flex items-center justify-between rounded-md border border-line bg-soft px-2 text-[10px] font-medium">
+          <span className="text-muted">top</span>
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={capacity}
+            onChange={(e) => setCapacity(Number(e.target.value))}
+            title="How many winners?"
+            className="w-7 bg-transparent text-center outline-none"
+          />
+          <span className="text-muted">win</span>
+        </div>
+      </div>
+
       <div className="mt-2 flex gap-1.5">
         <button
           onClick={add}
           disabled={!date}
-          className="flex-1 rounded-md bg-ink px-2 py-1 font-medium text-white disabled:opacity-40"
+          className="flex-1 rounded-md bg-ink px-2 py-1.5 font-medium text-white transition active:scale-[0.98] disabled:opacity-40"
         >
-          Add
+          Add slot
         </button>
         <button
           onClick={() => setOpen(false)}
-          className="rounded-md border border-line bg-white px-2 py-1 text-muted hover:bg-soft"
+          className="rounded-md border border-line bg-white px-2 py-1.5 text-muted transition active:scale-[0.98] hover:bg-soft"
         >
           cancel
         </button>

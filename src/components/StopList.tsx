@@ -3,7 +3,7 @@
 import { useState } from "react";
 import clsx from "clsx";
 import type { TripBundle, Stop, DaySlot, SlotKind } from "@/lib/types";
-import { SLOT_LABEL, SLOT_COLOR } from "@/lib/types";
+import { SLOT_LABEL, SLOT_EMOJI } from "@/lib/types";
 import StopAdder from "./StopAdder";
 import SlotAdder from "./SlotAdder";
 
@@ -160,14 +160,13 @@ function DayBlock({
               <button
                 onClick={() => onPickSlot(s.id)}
                 className={clsx(
-                  "group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left",
-                  isActive ? "bg-ink text-white" : "hover:bg-soft",
+                  "group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition active:scale-[0.99]",
+                  isActive ? "bg-ink text-white shadow-card" : "hover:bg-soft",
                 )}
               >
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: SLOT_COLOR[s.kind as SlotKind] }}
-                />
+                <span className="text-sm leading-none">
+                  {SLOT_EMOJI[s.kind as SlotKind]}
+                </span>
                 <span className="text-xs font-medium">
                   {s.label || SLOT_LABEL[s.kind as SlotKind]}
                 </span>

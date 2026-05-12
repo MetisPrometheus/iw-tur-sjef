@@ -7,7 +7,7 @@ import type {
   DaySlot,
   SlotKind,
 } from "@/lib/types";
-import { SLOT_COLOR, SLOT_LABEL } from "@/lib/types";
+import { SLOT_COLOR, SLOT_LABEL, SLOT_EMOJI } from "@/lib/types";
 import PlacesPicker from "./PlacesPicker";
 import SuggestionCard from "./SuggestionCard";
 
@@ -75,14 +75,20 @@ export default function SlotPanel({
           <span className="text-line">·</span>
           <span>{prettyDate(slot.date)}</span>
         </div>
-        <div className="mt-1.5 flex items-baseline gap-3">
+        <div className="mt-1.5 flex items-center gap-2">
+          <span
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-lg"
+            style={{
+              background: SLOT_COLOR[slot.kind as SlotKind] + "1f",
+              color: SLOT_COLOR[slot.kind as SlotKind],
+            }}
+            aria-hidden
+          >
+            {SLOT_EMOJI[slot.kind as SlotKind]}
+          </span>
           <h1 className="text-xl font-semibold sm:text-2xl">
             {slot.label || SLOT_LABEL[slot.kind as SlotKind]}
           </h1>
-          <span
-            className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ background: SLOT_COLOR[slot.kind as SlotKind] }}
-          />
           {slot.time_start && (
             <span className="text-sm text-muted">
               {slot.time_start.slice(0, 5)}
@@ -160,7 +166,7 @@ function TabBtn({
     <button
       onClick={onClick}
       className={clsx(
-        "rounded-full px-3 py-1.5 font-medium transition",
+        "rounded-full px-3 py-1.5 font-medium transition active:scale-[0.97]",
         active
           ? "bg-ink text-white"
           : "bg-soft text-muted hover:bg-line hover:text-ink",

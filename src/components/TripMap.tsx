@@ -69,14 +69,41 @@ export default function TripMap({
     const map = new mapboxgl.Map({
       container: ref.current,
       style: "mapbox://styles/mapbox/outdoors-v12",
+      projection: { name: "globe" },
       center: first ? [first.lng, first.lat] : [10.75, 59.91],
-      zoom: first ? 6 : 4,
+      zoom: first ? 5 : 1.6,
+      attributionControl: false,
     });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+    map.addControl(
+      new mapboxgl.AttributionControl({ compact: true }),
+      "bottom-right",
+    );
+    map.on("style.load", () => {
+      map.setFog({
+        color: "rgb(220, 232, 246)",
+        "high-color": "rgb(36, 92, 223)",
+        "horizon-blend": 0.04,
+        "space-color": "rgb(11, 11, 25)",
+        "star-intensity": 0.55,
+      });
+    });
     map.on("load", () => {
       map.addSource("route", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: "route-glow",
+        type: "line",
+        source: "route",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": "#10b981",
+          "line-width": 8,
+          "line-opacity": 0.18,
+          "line-blur": 4,
+        },
       });
       map.addLayer({
         id: "route-line",
@@ -86,7 +113,7 @@ export default function TripMap({
         paint: {
           "line-color": "#0f172a",
           "line-width": 3,
-          "line-opacity": 0.7,
+          "line-opacity": 0.8,
         },
       });
     });

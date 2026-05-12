@@ -111,9 +111,9 @@ export default function SuggestionCard({
               onClick={toggleVote}
               disabled={!meId}
               className={clsx(
-                "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition",
+                "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-[0.95] disabled:opacity-40",
                 myVote
-                  ? "bg-ink text-white"
+                  ? "bg-ink text-white shadow"
                   : "border border-line bg-white text-ink hover:border-brand hover:bg-brand-tint hover:text-brand-dark",
               )}
             >

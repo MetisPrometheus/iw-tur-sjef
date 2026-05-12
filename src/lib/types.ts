@@ -42,6 +42,17 @@ export const SLOT_PLACE_TYPE: Record<SlotKind, string> = {
   custom: "point_of_interest",
 };
 
+export const SLOT_EMOJI: Record<SlotKind, string> = {
+  breakfast: "🥐",
+  coffee: "☕",
+  lunch: "🥗",
+  activity: "🎒",
+  dinner: "🍝",
+  drink: "🍸",
+  lodging: "🛏️",
+  custom: "✨",
+};
+
 export const SLOT_COLOR: Record<SlotKind, string> = {
   breakfast: "#f59e0b",
   coffee: "#fb923c",
