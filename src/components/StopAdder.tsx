@@ -55,7 +55,7 @@ export default function StopAdder({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="mt-2 w-full rounded-lg border border-dashed border-ink/20 bg-white/60 px-3 py-2 text-xs font-medium text-ink/70 hover:bg-white"
+        className="mt-2 w-full rounded-lg border border-dashed border-line bg-white px-3 py-2.5 text-xs font-medium text-muted hover:border-brand hover:bg-brand-tint hover:text-brand-dark"
       >
         + Add stop
       </button>
@@ -63,30 +63,30 @@ export default function StopAdder({
   }
 
   return (
-    <div className="mt-2 rounded-lg border border-dust bg-white p-3 shadow-card">
+    <div className="mt-2 rounded-lg border border-line bg-white p-3 shadow-card">
       <input
         autoFocus
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search a town, region, address…"
-        className="w-full rounded-md border border-dust bg-sand/40 px-2 py-1.5 text-sm outline-none focus:border-moss"
+        className="w-full rounded-md border border-line bg-soft px-2 py-1.5 text-sm outline-none focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/20"
       />
       <input
         type="date"
         value={date}
         onChange={(e) => setDate(e.target.value)}
-        className="mt-2 w-full rounded-md border border-dust bg-sand/40 px-2 py-1.5 text-xs outline-none focus:border-moss"
+        className="mt-2 w-full rounded-md border border-line bg-soft px-2 py-1.5 text-xs outline-none focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/20"
       />
       {hits.length > 0 && (
-        <ul className="mt-2 max-h-56 overflow-y-auto rounded-md border border-dust">
+        <ul className="mt-2 max-h-56 overflow-y-auto rounded-md border border-line">
           {hits.map((h) => (
             <li key={`${h.lat},${h.lng}`}>
               <button
                 onClick={() => pick(h)}
-                className="block w-full px-2 py-1.5 text-left text-xs hover:bg-sand/60"
+                className="block w-full px-2 py-1.5 text-left text-xs hover:bg-soft"
               >
                 <div className="font-medium">{h.name}</div>
-                <div className="truncate text-ink/50">{h.place_name}</div>
+                <div className="truncate text-muted">{h.place_name}</div>
               </button>
             </li>
           ))}
@@ -98,7 +98,7 @@ export default function StopAdder({
           setQ("");
           setHits([]);
         }}
-        className="mt-2 w-full text-center text-[11px] text-ink/40 hover:text-ink"
+        className="mt-2 w-full text-center text-[11px] text-slate-400 hover:text-ink"
       >
         cancel
       </button>

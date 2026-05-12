@@ -44,8 +44,8 @@ export default function SuggestionCard({
   return (
     <li
       className={clsx(
-        "flex gap-3 rounded-xl border bg-white p-3 shadow-card",
-        isWinner ? "border-moss/70 ring-1 ring-moss/30" : "border-dust",
+        "flex gap-3 rounded-xl border bg-white p-3 shadow-card transition",
+        isWinner ? "border-brand ring-2 ring-brand/30" : "border-line",
       )}
     >
       {suggestion.photo_ref ? (
@@ -53,17 +53,17 @@ export default function SuggestionCard({
         <img
           src={`/api/places/photo?ref=${encodeURIComponent(suggestion.photo_ref)}&w=240`}
           alt={suggestion.name}
-          className="h-20 w-20 shrink-0 rounded-md object-cover"
+          className="h-20 w-20 shrink-0 rounded-md object-cover sm:h-24 sm:w-24"
         />
       ) : (
-        <div className="h-20 w-20 shrink-0 rounded-md bg-sand" />
+        <div className="h-20 w-20 shrink-0 rounded-md bg-soft sm:h-24 sm:w-24" />
       )}
       <div className="min-w-0 flex-1">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               {isWinner && (
-                <span className="rounded-full bg-moss px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">
+                <span className="rounded-full bg-brand px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
                   Winner
                 </span>
               )}
@@ -72,7 +72,7 @@ export default function SuggestionCard({
                 target={suggestion.url ? "_blank" : undefined}
                 rel="noreferrer"
                 className={clsx(
-                  "truncate text-sm font-semibold",
+                  "truncate text-sm font-semibold sm:text-base",
                   suggestion.url && "hover:underline",
                 )}
               >
@@ -80,17 +80,21 @@ export default function SuggestionCard({
               </a>
             </div>
             {suggestion.address && (
-              <div className="truncate text-[11px] text-ink/50">
+              <div className="truncate text-[11px] text-muted">
                 {suggestion.address}
               </div>
             )}
             {suggestion.note && (
-              <div className="mt-1 text-xs italic text-ink/70">
+              <div className="mt-1 text-xs italic text-slate-600">
                 &ldquo;{suggestion.note}&rdquo;
               </div>
             )}
-            <div className="mt-2 flex items-center gap-2 text-[11px] text-ink/50">
-              {suggestion.rating != null && <span>★ {suggestion.rating.toFixed(1)}</span>}
+            <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-muted">
+              {suggestion.rating != null && (
+                <span className="font-medium text-ink">
+                  ★ {suggestion.rating.toFixed(1)}
+                </span>
+              )}
               {author && (
                 <span className="flex items-center gap-1">
                   <span
@@ -107,10 +111,10 @@ export default function SuggestionCard({
               onClick={toggleVote}
               disabled={!meId}
               className={clsx(
-                "flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium",
+                "flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition",
                 myVote
-                  ? "bg-ink text-cream"
-                  : "border border-ink/20 bg-white hover:bg-sand/60",
+                  ? "bg-ink text-white"
+                  : "border border-line bg-white text-ink hover:border-brand hover:bg-brand-tint hover:text-brand-dark",
               )}
             >
               <span>▲</span>
@@ -119,7 +123,7 @@ export default function SuggestionCard({
             {meId === suggestion.added_by && (
               <button
                 onClick={remove}
-                className="text-[10px] text-ink/40 hover:text-rust"
+                className="text-[10px] text-slate-400 hover:text-rose-600"
               >
                 remove
               </button>

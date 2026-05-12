@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { DaySlot, Stop, SlotKind } from "@/lib/types";
+import type { DaySlot, Stop } from "@/lib/types";
 
 type NearbyPlace = {
   place_id: string;
@@ -92,55 +92,59 @@ export default function PlacesPicker({
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && load(q)}
           placeholder={`Search around ${stop.name}…`}
-          className="flex-1 rounded-md border border-dust bg-white px-3 py-2 text-sm outline-none focus:border-moss"
+          className="min-w-0 flex-1 rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
         />
         <button
           onClick={() => load(q || undefined)}
           disabled={loading}
-          className="rounded-md bg-ink px-3 py-2 text-xs font-medium text-cream disabled:opacity-40"
+          className="shrink-0 rounded-md bg-ink px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
         >
           {loading ? "…" : "Search"}
         </button>
       </div>
 
-      {err && <div className="mt-2 text-xs text-rust">{err}</div>}
+      {err && <div className="mt-2 text-xs text-rose-600">{err}</div>}
 
-      <ul className="mt-4 grid grid-cols-2 gap-3">
+      <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {places.map((p) => (
           <li
             key={p.place_id}
-            className="overflow-hidden rounded-xl border border-dust bg-white shadow-card"
+            className="overflow-hidden rounded-xl border border-line bg-white shadow-card"
           >
             {p.photo_ref ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={`/api/places/photo?ref=${encodeURIComponent(p.photo_ref)}&w=480`}
                 alt={p.name}
-                className="h-28 w-full object-cover"
+                className="h-32 w-full object-cover"
               />
             ) : (
-              <div className="h-28 w-full bg-sand" />
+              <div className="h-32 w-full bg-soft" />
             )}
             <div className="p-3">
-              <div className="line-clamp-1 text-sm font-medium">{p.name}</div>
-              <div className="line-clamp-1 text-[11px] text-ink/50">
+              <div className="line-clamp-1 text-sm font-semibold">{p.name}</div>
+              <div className="line-clamp-1 text-[11px] text-muted">
                 {p.address ?? "—"}
               </div>
-              <div className="mt-1 flex items-center gap-2 text-[11px] text-ink/60">
+              <div className="mt-1 flex items-center gap-2 text-[11px] text-muted">
                 {p.rating != null && (
-                  <span>
+                  <span className="font-medium text-ink">
                     ★ {p.rating.toFixed(1)}{" "}
-                    <span className="text-ink/40">({p.user_ratings_total ?? 0})</span>
+                    <span className="font-normal text-slate-400">
+                      ({p.user_ratings_total ?? 0})
+                    </span>
                   </span>
                 )}
                 {p.price_level != null && (
-                  <span className="text-ink/40">{"$".repeat(p.price_level + 1)}</span>
+                  <span className="text-slate-400">
+                    {"$".repeat(p.price_level + 1)}
+                  </span>
                 )}
               </div>
               <button
                 disabled={!meId || adding === p.place_id}
                 onClick={() => add(p)}
-                className="mt-2 w-full rounded-md border border-ink/20 bg-cream px-2 py-1 text-xs font-medium hover:bg-sand/60 disabled:opacity-40"
+                className="mt-2 w-full rounded-md border border-line bg-white px-2 py-1.5 text-xs font-medium hover:border-brand hover:bg-brand-tint hover:text-brand-dark disabled:opacity-40"
               >
                 {adding === p.place_id ? "adding…" : "Suggest +"}
               </button>
@@ -148,7 +152,7 @@ export default function PlacesPicker({
           </li>
         ))}
         {!loading && places.length === 0 && (
-          <li className="col-span-2 rounded-lg border border-dashed border-dust px-4 py-8 text-center text-sm text-ink/50">
+          <li className="rounded-lg border border-dashed border-line px-4 py-8 text-center text-sm text-muted sm:col-span-2">
             no places found — try a different keyword
           </li>
         )}

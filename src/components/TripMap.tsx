@@ -84,7 +84,7 @@ export default function TripMap({
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
-          "line-color": "#0c0a09",
+          "line-color": "#0f172a",
           "line-width": 3,
           "line-opacity": 0.7,
         },
@@ -111,8 +111,8 @@ export default function TripMap({
       el.className = "stop-pin";
       el.textContent = letter;
       Object.assign(el.style, {
-        background: "#0c0a09",
-        color: "#fdfaf4",
+        background: "#0f172a",
+        color: "#ffffff",
         width: "28px",
         height: "28px",
         borderRadius: "999px",

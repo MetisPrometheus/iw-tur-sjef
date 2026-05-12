@@ -43,14 +43,14 @@ export const SLOT_PLACE_TYPE: Record<SlotKind, string> = {
 };
 
 export const SLOT_COLOR: Record<SlotKind, string> = {
-  breakfast: "#e0a458",
-  coffee: "#a98467",
-  lunch: "#e07a5f",
-  activity: "#3d5a80",
-  dinner: "#b85c38",
-  drink: "#9b5de5",
-  lodging: "#81b29a",
-  custom: "#7a7a7a",
+  breakfast: "#f59e0b",
+  coffee: "#fb923c",
+  lunch: "#f43f5e",
+  activity: "#6366f1",
+  dinner: "#ef4444",
+  drink: "#8b5cf6",
+  lodging: "#10b981",
+  custom: "#94a3b8",
 };
 
 export type Trip = {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import clsx from "clsx";
 import type { TripBundle, Stop, DaySlot, SlotKind } from "@/lib/types";
-import { SLOT_KINDS, SLOT_LABEL, SLOT_COLOR } from "@/lib/types";
+import { SLOT_LABEL, SLOT_COLOR } from "@/lib/types";
 import StopAdder from "./StopAdder";
 import SlotAdder from "./SlotAdder";
 
@@ -22,7 +22,7 @@ export default function StopList({
 }) {
   return (
     <div className="flex flex-col">
-      <div className="px-4 pt-5 pb-2 text-xs uppercase tracking-[0.18em] text-ink/50">
+      <div className="px-4 pt-5 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
         Route
       </div>
       <ol className="flex flex-col">
@@ -79,10 +79,10 @@ function StopRow({
 
   return (
     <li className="relative">
-      <div className="flex items-center gap-2 px-4 py-2 hover:bg-sand/50">
+      <div className="flex items-center gap-2.5 px-4 py-2 hover:bg-soft">
         <button
           onClick={() => setOpen((o) => !o)}
-          className="grid h-7 w-7 place-items-center rounded-full bg-ink text-xs font-bold text-cream"
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-ink text-xs font-bold text-white"
           title={open ? "Collapse" : "Expand"}
         >
           {letter}
@@ -90,22 +90,24 @@ function StopRow({
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{stop.name}</div>
           {stop.arrival_date && (
-            <div className="text-[11px] text-ink/50">{stop.arrival_date}</div>
+            <div className="text-[11px] text-muted">
+              {prettyShortDate(stop.arrival_date)}
+            </div>
           )}
         </div>
         <button
           onClick={deleteStop}
-          className="rounded text-xs text-ink/40 hover:text-rust"
+          className="rounded p-1 text-xs text-slate-400 hover:bg-rose-50 hover:text-rose-600"
           title="Remove stop"
         >
           ✕
         </button>
       </div>
-      {!isLast && <div className="ml-[27px] h-3 w-px bg-dust" />}
+      {!isLast && <div className="ml-[27px] h-3 w-px bg-line" />}
       {open && (
         <div className="pb-2 pl-12 pr-4">
           {dates.length === 0 && (
-            <div className="py-1 text-xs italic text-ink/40">no days yet</div>
+            <div className="py-1 text-xs italic text-slate-400">no days yet</div>
           )}
           {dates.map((d) => (
             <DayBlock
@@ -115,8 +117,6 @@ function StopRow({
               activeSlotId={activeSlotId}
               onPickSlot={onPickSlot}
               bundle={bundle}
-              slug={slug}
-              onMutated={onMutated}
             />
           ))}
           <SlotAdder stopId={stop.id} slug={slug} onAdded={onMutated} />
@@ -132,20 +132,16 @@ function DayBlock({
   activeSlotId,
   onPickSlot,
   bundle,
-  slug,
-  onMutated,
 }: {
   date: string;
   slots: DaySlot[];
   activeSlotId: string | null;
   onPickSlot: (id: string) => void;
   bundle: TripBundle;
-  slug: string;
-  onMutated: () => void;
 }) {
   return (
     <div className="mt-2">
-      <div className="text-[10px] uppercase tracking-[0.18em] text-ink/40">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
         {prettyDate(date)}
       </div>
       <ul className="mt-1 flex flex-col gap-1">
@@ -165,7 +161,7 @@ function DayBlock({
                 onClick={() => onPickSlot(s.id)}
                 className={clsx(
                   "group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left",
-                  isActive ? "bg-ink text-cream" : "hover:bg-sand/70",
+                  isActive ? "bg-ink text-white" : "hover:bg-soft",
                 )}
               >
                 <span
@@ -179,7 +175,7 @@ function DayBlock({
                   <span
                     className={clsx(
                       "text-[10px]",
-                      isActive ? "text-cream/70" : "text-ink/40",
+                      isActive ? "text-white/70" : "text-slate-400",
                     )}
                   >
                     {s.time_start.slice(0, 5)}
@@ -191,7 +187,7 @@ function DayBlock({
                     <span
                       className={clsx(
                         "max-w-[100px] truncate text-[10px]",
-                        isActive ? "text-cream/80" : "text-ink/50",
+                        isActive ? "text-white/80" : "text-muted",
                       )}
                     >
                       → {top.name}
@@ -199,8 +195,8 @@ function DayBlock({
                   )}
                   <span
                     className={clsx(
-                      "rounded px-1 text-[10px]",
-                      isActive ? "bg-cream/20" : "bg-dust/60",
+                      "rounded px-1 text-[10px] font-medium",
+                      isActive ? "bg-white/20" : "bg-soft",
                     )}
                   >
                     {sugs.length}
@@ -216,9 +212,15 @@ function DayBlock({
 }
 
 function prettyDate(d: string): string {
-  const dt = new Date(d + "T00:00:00");
-  return dt.toLocaleDateString(undefined, {
+  return new Date(d.slice(0, 10) + "T00:00:00").toLocaleDateString(undefined, {
     weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function prettyShortDate(d: string): string {
+  return new Date(d.slice(0, 10) + "T00:00:00").toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
   });

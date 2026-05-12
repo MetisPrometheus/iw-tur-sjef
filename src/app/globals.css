@@ -8,8 +8,8 @@
 
 html,
 body {
-  background: #fdfaf4;
-  color: #0c0a09;
+  background: #f8fafc;
+  color: #0f172a;
   height: 100%;
 }
 
@@ -18,8 +18,21 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Prevent horizontal scroll on iOS Safari from off-screen tab panes. */
+html, body {
+  overflow-x: hidden;
+}
+
 .mapboxgl-popup-content {
   border-radius: 12px;
   padding: 10px 12px;
   font-family: var(--font-sans);
+  color: #0f172a;
+  box-shadow: 0 10px 30px -10px rgba(15,23,42,0.2);
 }
+
+/* Nicer scrollbars on webkit. */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+*::-webkit-scrollbar-track { background: transparent; }

@@ -5,7 +5,6 @@ import clsx from "clsx";
 import type {
   TripBundle,
   DaySlot,
-  Suggestion,
   SlotKind,
 } from "@/lib/types";
 import { SLOT_COLOR, SLOT_LABEL } from "@/lib/types";
@@ -34,15 +33,15 @@ export default function SlotPanel({
 
   if (!slot || !stop) {
     return (
-      <div className="grid h-full place-items-center p-12 text-center">
+      <div className="grid h-full place-items-center p-8 text-center sm:p-12">
         <div className="max-w-sm">
-          <div className="text-xs uppercase tracking-[0.18em] text-ink/40">
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
             Pick a slot
           </div>
-          <h2 className="mt-2 text-xl font-semibold">
+          <h2 className="mt-2 text-xl font-semibold sm:text-2xl">
             Drop a stop, add a day, suggest things to do.
           </h2>
-          <p className="mt-3 text-sm text-ink/60">
+          <p className="mt-3 text-sm text-muted">
             Each slot is a moment in the day — lunch, an afternoon activity,
             where to sleep. Friends pitch options, everyone votes, winners hit
             the map.
@@ -58,33 +57,39 @@ export default function SlotPanel({
       s,
       votes: bundle.votes.filter((v) => v.suggestion_id === s.id),
     }))
-    .sort((a, b) => b.votes.length - a.votes.length || a.s.created_at.localeCompare(b.s.created_at));
+    .sort(
+      (a, b) =>
+        b.votes.length - a.votes.length ||
+        a.s.created_at.localeCompare(b.s.created_at),
+    );
 
-  const winners = new Set(suggestions.slice(0, slot.capacity).map((x) => x.s.id));
+  const winners = new Set(
+    suggestions.slice(0, slot.capacity).map((x) => x.s.id),
+  );
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-dust bg-white px-6 pt-5 pb-4">
-        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-ink/50">
-          <span>{stop.name}</span>
-          <span className="text-dust">·</span>
+      <div className="border-b border-line bg-white px-4 pt-4 pb-4 sm:px-6 sm:pt-5">
+        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.15em] text-muted">
+          <span className="truncate">{stop.name}</span>
+          <span className="text-line">·</span>
           <span>{prettyDate(slot.date)}</span>
         </div>
-        <div className="mt-1 flex items-baseline gap-3">
-          <h1 className="text-2xl font-semibold">
+        <div className="mt-1.5 flex items-baseline gap-3">
+          <h1 className="text-xl font-semibold sm:text-2xl">
             {slot.label || SLOT_LABEL[slot.kind as SlotKind]}
           </h1>
           <span
-            className="inline-block h-2 w-2 rounded-full"
+            className="inline-block h-2.5 w-2.5 rounded-full"
             style={{ background: SLOT_COLOR[slot.kind as SlotKind] }}
           />
           {slot.time_start && (
-            <span className="text-sm text-ink/50">
+            <span className="text-sm text-muted">
               {slot.time_start.slice(0, 5)}
               {slot.time_end ? `–${slot.time_end.slice(0, 5)}` : ""}
             </span>
           )}
-          <span className="ml-auto rounded-full bg-sand/80 px-2.5 py-1 text-xs text-ink/60">
+          <span className="ml-auto rounded-full bg-brand-tint px-2.5 py-1 text-xs font-medium text-brand-dark">
             top {slot.capacity} win
           </span>
         </div>
@@ -99,7 +104,7 @@ export default function SlotPanel({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-5">
+      <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
         {tab === "places" ? (
           <PlacesPicker
             slot={slot}
@@ -113,11 +118,11 @@ export default function SlotPanel({
         )}
 
         <div className="mt-8">
-          <div className="mb-3 text-xs uppercase tracking-[0.18em] text-ink/50">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
             Suggestions ({suggestions.length})
           </div>
           {suggestions.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-dust bg-white/60 px-4 py-8 text-center text-sm text-ink/50">
+            <div className="rounded-lg border border-dashed border-line bg-white px-4 py-8 text-center text-sm text-muted">
               nothing here yet — add the first one
             </div>
           ) : (
@@ -130,7 +135,7 @@ export default function SlotPanel({
                   participants={bundle.participants}
                   meId={meId}
                   slug={slug}
-                  isWinner={winners.has(s.id)}
+                  isWinner={winners.has(s.id) && votes.length > 0}
                   onMutated={onMutated}
                 />
               ))}
@@ -155,8 +160,10 @@ function TabBtn({
     <button
       onClick={onClick}
       className={clsx(
-        "rounded-full px-3 py-1 font-medium",
-        active ? "bg-ink text-cream" : "bg-sand/60 text-ink/60 hover:bg-sand",
+        "rounded-full px-3 py-1.5 font-medium transition",
+        active
+          ? "bg-ink text-white"
+          : "bg-soft text-muted hover:bg-line hover:text-ink",
       )}
     >
       {children}
@@ -196,12 +203,12 @@ function FreeTextAdder({
   }
 
   return (
-    <div className="rounded-xl border border-dust bg-white p-4">
+    <div className="rounded-xl border border-line bg-white p-4">
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="e.g. that ramen place Marius mentioned"
-        className="w-full rounded-md border border-dust bg-sand/40 px-3 py-2 text-sm outline-none focus:border-moss"
+        className="w-full rounded-md border border-line bg-soft px-3 py-2 text-sm outline-none focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/20"
       />
       <textarea
         value={note}
@@ -209,12 +216,12 @@ function FreeTextAdder({
         placeholder="optional note — why you want it"
         rows={2}
         maxLength={280}
-        className="mt-2 w-full resize-none rounded-md border border-dust bg-sand/40 px-3 py-2 text-sm outline-none focus:border-moss"
+        className="mt-2 w-full resize-none rounded-md border border-line bg-soft px-3 py-2 text-sm outline-none focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/20"
       />
       <button
         onClick={add}
         disabled={!name.trim() || !meId}
-        className="mt-2 rounded-md bg-ink px-3 py-1.5 text-xs font-medium text-cream disabled:opacity-40"
+        className="mt-2 rounded-md bg-ink px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
       >
         Suggest it
       </button>
@@ -223,7 +230,7 @@ function FreeTextAdder({
 }
 
 function prettyDate(d: string): string {
-  return new Date(d + "T00:00:00").toLocaleDateString(undefined, {
+  return new Date(d.slice(0, 10) + "T00:00:00").toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
     day: "numeric",

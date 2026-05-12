@@ -46,7 +46,7 @@ export default function SlotAdder({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="mt-2 w-full rounded-md border border-dashed border-ink/15 px-2 py-1 text-[11px] text-ink/50 hover:bg-white"
+        className="mt-2 w-full rounded-md border border-dashed border-line px-2 py-1 text-[11px] text-muted hover:border-brand hover:bg-brand-tint hover:text-brand-dark"
       >
         + Add to a day
       </button>
@@ -54,18 +54,18 @@ export default function SlotAdder({
   }
 
   return (
-    <div className="mt-2 rounded-md border border-dust bg-white p-2 text-xs">
+    <div className="mt-2 rounded-md border border-line bg-white p-2 text-xs">
       <input
         type="date"
         value={date}
         onChange={(e) => setDate(e.target.value)}
-        className="w-full rounded-md border border-dust bg-sand/40 px-2 py-1 outline-none focus:border-moss"
+        className="w-full rounded-md border border-line bg-soft px-2 py-1 outline-none focus:border-brand focus:bg-white"
       />
       <div className="mt-2 flex gap-1.5">
         <select
           value={kind}
           onChange={(e) => setKind(e.target.value as SlotKind)}
-          className="flex-1 rounded-md border border-dust bg-sand/40 px-2 py-1"
+          className="flex-1 rounded-md border border-line bg-soft px-2 py-1 outline-none focus:border-brand focus:bg-white"
         >
           {SLOT_KINDS.map((k) => (
             <option key={k} value={k}>
@@ -80,7 +80,7 @@ export default function SlotAdder({
           value={capacity}
           onChange={(e) => setCapacity(Number(e.target.value))}
           title="How many winners?"
-          className="w-12 rounded-md border border-dust bg-sand/40 px-2 py-1 text-center"
+          className="w-12 rounded-md border border-line bg-soft px-2 py-1 text-center outline-none focus:border-brand focus:bg-white"
         />
       </div>
       <div className="mt-2 flex gap-1.5">
@@ -89,14 +89,14 @@ export default function SlotAdder({
           value={from}
           onChange={(e) => setFrom(e.target.value)}
           placeholder="from"
-          className="flex-1 rounded-md border border-dust bg-sand/40 px-2 py-1"
+          className="flex-1 rounded-md border border-line bg-soft px-2 py-1 outline-none focus:border-brand focus:bg-white"
         />
         <input
           type="time"
           value={to}
           onChange={(e) => setTo(e.target.value)}
           placeholder="to"
-          className="flex-1 rounded-md border border-dust bg-sand/40 px-2 py-1"
+          className="flex-1 rounded-md border border-line bg-soft px-2 py-1 outline-none focus:border-brand focus:bg-white"
         />
       </div>
       {kind === "custom" && (
@@ -105,20 +105,20 @@ export default function SlotAdder({
           onChange={(e) => setLabel(e.target.value)}
           placeholder="label (e.g. 'museum stop')"
           maxLength={60}
-          className="mt-2 w-full rounded-md border border-dust bg-sand/40 px-2 py-1"
+          className="mt-2 w-full rounded-md border border-line bg-soft px-2 py-1 outline-none focus:border-brand focus:bg-white"
         />
       )}
       <div className="mt-2 flex gap-1.5">
         <button
           onClick={add}
           disabled={!date}
-          className="flex-1 rounded-md bg-ink px-2 py-1 font-medium text-cream disabled:opacity-40"
+          className="flex-1 rounded-md bg-ink px-2 py-1 font-medium text-white disabled:opacity-40"
         >
           Add
         </button>
         <button
           onClick={() => setOpen(false)}
-          className="rounded-md border border-dust bg-white px-2 py-1 text-ink/60"
+          className="rounded-md border border-line bg-white px-2 py-1 text-muted hover:bg-soft"
         >
           cancel
         </button>
