@@ -1,12 +1,26 @@
 import { readdir, readFile } from "node:fs/promises";
-import { join, dirname } from "node:path";
+import { readFileSync, existsSync } from "node:fs";
+import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadEnvConfig } from "@next/env";
 import postgres from "postgres";
 
-loadEnvConfig(process.cwd());
+// Force .env.local to win over inherited shell env (the box's systemd profile
+// sets DATABASE_URL for kenjaku-bot, which would otherwise leak in here).
+function loadDotenv(path: string): void {
+  if (!existsSync(path)) return;
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line);
+    if (!m) continue;
+    let v = m[2];
+    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+      v = v.slice(1, -1);
+    }
+    process.env[m[1]] = v;
+  }
+}
 
 const here = dirname(fileURLToPath(import.meta.url));
+loadDotenv(resolve(here, "..", ".env.local"));
 const migrationsDir = join(here, "migrations");
 
 async function main() {
@@ -15,6 +29,7 @@ async function main() {
     console.error("DATABASE_URL not set. Source /etc/tur-sjef/env or set it in .env.local.");
     process.exit(1);
   }
+  console.log("→ migrating", DATABASE_URL.replace(/:[^:@]+@/, ":***@"));
 
   const sql = postgres(DATABASE_URL, { onnotice: () => {} });
 
