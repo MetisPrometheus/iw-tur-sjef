@@ -18,16 +18,17 @@ type Winner = {
 export default function TripMap({
   bundle,
   activeSlotId,
+  onStopClick,
 }: {
   bundle: TripBundle;
   activeSlotId: string | null;
+  onStopClick?: (stopId: string) => void;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const routeReqRef = useRef(0);
 
-  // Compute winning suggestions per slot.
   const winners: Winner[] = useMemo(() => {
     const out: Winner[] = [];
     const slotById = new Map(bundle.slots.map((s) => [s.id, s]));
@@ -35,7 +36,6 @@ export default function TripMap({
     const counts: Record<string, number> = {};
     for (const v of bundle.votes) counts[v.suggestion_id] = (counts[v.suggestion_id] ?? 0) + 1;
 
-    // Group suggestions by slot.
     const bySlot = new Map<string, string[]>();
     for (const s of bundle.suggestions) {
       const arr = bySlot.get(s.slot_id) ?? [];
@@ -49,7 +49,7 @@ export default function TripMap({
       for (let i = 0; i < Math.min(slot.capacity, sorted.length); i++) {
         const s = byId.get(sorted[i])!;
         if (s.lat == null || s.lng == null) continue;
-        if ((counts[s.id] ?? 0) === 0) continue; // only show actually-voted winners
+        if ((counts[s.id] ?? 0) === 0) continue;
         out.push({
           id: s.id,
           lat: s.lat,
@@ -62,7 +62,6 @@ export default function TripMap({
     return out;
   }, [bundle.slots, bundle.suggestions, bundle.votes]);
 
-  // Init map once.
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
     const first = bundle.stops[0];
@@ -71,23 +70,26 @@ export default function TripMap({
       style: "mapbox://styles/mapbox/outdoors-v12",
       projection: { name: "globe" },
       center: first ? [first.lng, first.lat] : [10.75, 59.91],
-      zoom: first ? 5 : 1.6,
+      zoom: first ? 4.6 : 1.4,
       attributionControl: false,
     });
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-left");
     map.addControl(
       new mapboxgl.AttributionControl({ compact: true }),
       "bottom-right",
     );
+
     map.on("style.load", () => {
+      // Warm dusk fog: rosy horizon, deep navy space.
       map.setFog({
-        color: "rgb(220, 232, 246)",
-        "high-color": "rgb(36, 92, 223)",
-        "horizon-blend": 0.04,
-        "space-color": "rgb(11, 11, 25)",
-        "star-intensity": 0.55,
+        color: "rgb(252, 232, 207)",
+        "high-color": "rgb(196, 99, 60)",
+        "horizon-blend": 0.06,
+        "space-color": "rgb(20, 14, 30)",
+        "star-intensity": 0.65,
       });
     });
+
     map.on("load", () => {
       map.addSource("route", {
         type: "geojson",
@@ -99,10 +101,10 @@ export default function TripMap({
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
-          "line-color": "#10b981",
-          "line-width": 8,
-          "line-opacity": 0.18,
-          "line-blur": 4,
+          "line-color": "#c4633c",
+          "line-width": 10,
+          "line-opacity": 0.22,
+          "line-blur": 6,
         },
       });
       map.addLayer({
@@ -111,12 +113,14 @@ export default function TripMap({
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
-          "line-color": "#0f172a",
+          "line-color": "#2a2520",
           "line-width": 3,
-          "line-opacity": 0.8,
+          "line-opacity": 0.85,
+          "line-dasharray": [0.6, 1.4],
         },
       });
     });
+
     mapRef.current = map;
     return () => {
       map.remove();
@@ -125,7 +129,6 @@ export default function TripMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-render markers when bundle changes.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -134,24 +137,45 @@ export default function TripMap({
 
     bundle.stops.forEach((stop, i) => {
       const letter = String.fromCharCode(65 + i);
-      const el = document.createElement("div");
-      el.className = "stop-pin";
-      el.textContent = letter;
-      Object.assign(el.style, {
-        background: "#0f172a",
-        color: "#ffffff",
-        width: "28px",
-        height: "28px",
-        borderRadius: "999px",
-        display: "grid",
-        placeItems: "center",
-        fontWeight: "700",
-        fontSize: "12px",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-      } as Partial<CSSStyleDeclaration>);
-      const m = new mapboxgl.Marker({ element: el })
+      const el = document.createElement("button");
+      el.type = "button";
+      el.setAttribute("aria-label", stop.name);
+      el.style.cursor = "pointer";
+      el.style.background = "transparent";
+      el.style.border = "0";
+      el.style.padding = "0";
+      el.innerHTML = `
+        <span style="
+          position: relative;
+          display: grid;
+          place-items: center;
+          width: 38px;
+          height: 38px;
+          border-radius: 999px;
+          background: linear-gradient(135deg, #fcd34d 0%, #c4633c 95%);
+          color: #2a2520;
+          font-weight: 800;
+          font-size: 14px;
+          box-shadow:
+            0 0 0 3px #faf6ef,
+            0 0 24px 6px rgba(252,211,77,0.55),
+            0 8px 18px -4px rgba(42,37,32,0.55);
+          font-family: var(--font-fraunces), serif;
+        ">${letter}</span>
+      `;
+      if (onStopClick) {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          onStopClick(stop.id);
+        });
+      }
+      const m = new mapboxgl.Marker({ element: el, anchor: "center" })
         .setLngLat([stop.lng, stop.lat])
-        .setPopup(new mapboxgl.Popup({ offset: 18 }).setHTML(`<b>${escape(stop.name)}</b>`))
+        .setPopup(
+          new mapboxgl.Popup({ offset: 24, closeButton: false }).setHTML(
+            `<div style="font-family: var(--font-fraunces), serif; font-weight: 600; font-size: 14px;">${escapeHTML(stop.name)}</div>`,
+          ),
+        )
         .addTo(map);
       markersRef.current.push(m);
     });
@@ -160,20 +184,24 @@ export default function TripMap({
       const el = document.createElement("div");
       Object.assign(el.style, {
         background: SLOT_COLOR[w.kind],
-        width: "14px",
-        height: "14px",
+        width: "16px",
+        height: "16px",
         borderRadius: "999px",
-        border: "2px solid #fff",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.35)",
+        border: "2.5px solid #faf6ef",
+        boxShadow: "0 4px 12px -2px rgba(42,37,32,0.55), 0 0 0 1px rgba(42,37,32,0.18)",
+        cursor: "pointer",
       } as Partial<CSSStyleDeclaration>);
-      const m = new mapboxgl.Marker({ element: el })
+      const m = new mapboxgl.Marker({ element: el, anchor: "center" })
         .setLngLat([w.lng, w.lat])
-        .setPopup(new mapboxgl.Popup({ offset: 12 }).setHTML(`<b>${escape(w.name)}</b>`))
+        .setPopup(
+          new mapboxgl.Popup({ offset: 14, closeButton: false }).setHTML(
+            `<div style="font-weight: 600; font-size: 13px;">${escapeHTML(w.name)}</div>`,
+          ),
+        )
         .addTo(map);
       markersRef.current.push(m);
     });
 
-    // Fit bounds.
     const pts = [
       ...bundle.stops.map((s) => [s.lng, s.lat] as [number, number]),
       ...winners.map((w) => [w.lng, w.lat] as [number, number]),
@@ -183,13 +211,12 @@ export default function TripMap({
         (b, p) => b.extend(p),
         new mapboxgl.LngLatBounds(pts[0], pts[0]),
       );
-      map.fitBounds(bounds, { padding: 60, duration: 600, maxZoom: 10 });
+      map.fitBounds(bounds, { padding: 90, duration: 1400, maxZoom: 9 });
     } else if (pts.length === 1) {
-      map.flyTo({ center: pts[0], zoom: 9, duration: 600 });
+      map.flyTo({ center: pts[0], zoom: 8, duration: 1200 });
     }
-  }, [bundle.stops, winners]);
+  }, [bundle.stops, winners, onStopClick]);
 
-  // Fetch driving route when stops change.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -217,11 +244,7 @@ export default function TripMap({
           if (!src) return;
           src.setData(
             data.route
-              ? {
-                  type: "Feature",
-                  geometry: data.route.geometry,
-                  properties: {},
-                }
+              ? { type: "Feature", geometry: data.route.geometry, properties: {} }
               : { type: "FeatureCollection", features: [] },
           );
         };
@@ -231,7 +254,6 @@ export default function TripMap({
       .catch(() => {});
   }, [bundle.stops]);
 
-  // Highlight active slot's winner by flying to it.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !activeSlotId) return;
@@ -239,12 +261,14 @@ export default function TripMap({
     if (!slot) return;
     const stop = bundle.stops.find((s) => s.id === slot.stop_id);
     if (!stop) return;
-    map.flyTo({ center: [stop.lng, stop.lat], zoom: 11, duration: 700 });
+    map.flyTo({ center: [stop.lng, stop.lat], zoom: 11, duration: 1400, essential: true });
   }, [activeSlotId, bundle.slots, bundle.stops]);
 
-  return <div ref={ref} className="h-full w-full" />;
+  return <div ref={ref} className="absolute inset-0" />;
 }
 
-function escape(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+function escapeHTML(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+  );
 }

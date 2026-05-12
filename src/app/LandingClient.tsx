@@ -37,88 +37,129 @@ export default function LandingClient() {
   }
 
   return (
-    <main className="relative min-h-[100dvh] overflow-hidden bg-soft">
-      {/* Soft gradient blobs as background. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-32 -top-32 h-80 w-80 rounded-full opacity-40 blur-3xl"
-        style={{ background: "radial-gradient(circle, #10b981 0%, transparent 70%)" }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -bottom-40 -right-32 h-96 w-96 rounded-full opacity-30 blur-3xl"
-        style={{ background: "radial-gradient(circle, #6366f1 0%, transparent 70%)" }}
-      />
-
-      <div className="relative mx-auto max-w-3xl px-5 pt-14 pb-24 sm:px-6 sm:pt-20">
-        <div className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-dark">
-          tur-sjef
+    <main className="grain relative min-h-[100dvh] overflow-y-auto bg-cream">
+      <div className="relative mx-auto flex max-w-5xl flex-col px-5 pt-12 pb-20 sm:px-8 sm:pt-20">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-rust-dark">
+          tur-sjef · a road-trip atlas
         </div>
-        <h1 className="mt-3 text-[2.5rem] font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-          Plan a road trip,
+        <h1 className="mt-4 font-serif text-[2.75rem] font-semibold leading-[1.02] tracking-tight sm:text-7xl">
+          Plan the road,
           <br />
-          <span className="bg-gradient-to-r from-brand to-indigo-500 bg-clip-text text-transparent">
-            together.
-          </span>
+          <span className="italic text-rust">together.</span>
         </h1>
-        <p className="mt-5 max-w-xl text-base text-slate-600 sm:mt-6 sm:text-lg">
-          Drop in your stops, pull nearby gems from Google, let your friends pitch
-          options for each meal, activity and overnight — then vote. Winners hit
-          the map. No accounts, just a shareable link.
+        <p className="mt-6 max-w-xl text-base text-ink/75 sm:text-lg">
+          Drop your stops on a globe. Pull nearby gems from Google. Let your friends
+          pitch what to eat, what to do, where to sleep — and vote. The winners hit
+          the atlas. No accounts; just a link the crew shares.
         </p>
 
-        <div className="mt-10 grid gap-4 sm:mt-12 sm:grid-cols-2 sm:gap-6">
+        <div className="mt-10 grid gap-5 sm:mt-14 sm:grid-cols-2 sm:gap-7">
           <form
             onSubmit={create}
-            className="rounded-2xl border border-line bg-white p-5 shadow-card sm:p-6"
+            className="relative overflow-hidden rounded-4xl border border-line bg-cream p-6 shadow-soft transition hover:shadow-lift sm:p-8"
           >
-            <h2 className="text-lg font-semibold">Start a new trip</h2>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full opacity-30 blur-3xl"
+              style={{ background: "radial-gradient(circle, #fcd34d, transparent 70%)" }}
+            />
+            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-rust-dark">
+              Start fresh
+            </div>
+            <h2 className="mt-2 font-serif text-2xl font-semibold tracking-tight">
+              Begin a new trip
+            </h2>
             <p className="mt-1 text-sm text-muted">
-              You&apos;ll get a link to share with the crew.
+              You&apos;ll get a slug to share with the crew.
             </p>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Sør-Norge august"
-              className="mt-4 w-full rounded-lg border border-line bg-soft px-3 py-2.5 outline-none focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/20"
+              placeholder="e.g. Lofoten i juli"
+              className="mt-5 w-full rounded-2xl border border-line bg-cream px-4 py-3 text-base outline-none focus:border-rust"
               maxLength={80}
             />
             <button
               type="submit"
               disabled={busy || !name.trim()}
-              className="mt-4 w-full rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition hover:bg-ink/90 disabled:opacity-40"
+              className="mt-3 w-full rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-cream transition active:scale-[0.98] disabled:opacity-40"
             >
-              {busy ? "creating…" : "Create trip →"}
+              {busy ? "creating…" : "Create the atlas →"}
             </button>
-            {err && <div className="mt-3 text-sm text-rose-600">{err}</div>}
+            {err && <div className="mt-3 text-sm text-rust">{err}</div>}
           </form>
 
           <form
             onSubmit={join}
-            className="rounded-2xl border border-line bg-white p-5 shadow-card sm:p-6"
+            className="relative overflow-hidden rounded-4xl border border-line bg-cream p-6 shadow-soft transition hover:shadow-lift sm:p-8"
           >
-            <h2 className="text-lg font-semibold">Join an existing one</h2>
-            <p className="mt-1 text-sm text-muted">Paste the slug or full URL.</p>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -left-10 -bottom-10 h-36 w-36 rounded-full opacity-25 blur-3xl"
+              style={{ background: "radial-gradient(circle, #7c9885, transparent 70%)" }}
+            />
+            <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sage-dark">
+              Got a link?
+            </div>
+            <h2 className="mt-2 font-serif text-2xl font-semibold tracking-tight">
+              Join an existing one
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Paste the slug or the full URL.
+            </p>
             <input
               value={joinSlug}
               onChange={(e) => setJoinSlug(e.target.value)}
               placeholder="ab3kpq8m9d"
-              className="mt-4 w-full rounded-lg border border-line bg-soft px-3 py-2.5 outline-none focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/20"
+              className="mt-5 w-full rounded-2xl border border-line bg-cream px-4 py-3 text-base outline-none focus:border-sage-dark"
             />
             <button
               type="submit"
               disabled={!joinSlug.trim()}
-              className="mt-4 w-full rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-medium text-ink transition hover:bg-soft disabled:opacity-40"
+              className="mt-3 w-full rounded-2xl border border-line bg-cream px-4 py-3 text-sm font-semibold text-ink transition active:scale-[0.98] hover:bg-sand disabled:opacity-40"
             >
               Open trip →
             </button>
           </form>
         </div>
 
-        <div className="mt-16 text-xs uppercase tracking-[0.22em] text-slate-400 sm:mt-20">
+        <div className="mt-16 grid gap-6 sm:mt-24 sm:grid-cols-3">
+          <Feature emoji="🌍" title="A globe, not a list">
+            Your stops are pins on a real atlas. Mapbox 3D, road routing,
+            zoom into the day you&apos;re planning.
+          </Feature>
+          <Feature emoji="🗳️" title="The crew decides">
+            Everyone pitches options. Everyone votes. Highest-voted suggestion
+            wins the slot — and lands on the map.
+          </Feature>
+          <Feature emoji="🥐" title="By the moment">
+            Break each day into the bits that matter — breakfast, an activity,
+            where to sleep — with a top-N limit per slot.
+          </Feature>
+        </div>
+
+        <div className="mt-20 text-[10px] uppercase tracking-[0.28em] text-muted">
           A → B → C → home
         </div>
       </div>
     </main>
+  );
+}
+
+function Feature({
+  emoji,
+  title,
+  children,
+}: {
+  emoji: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-3xl border border-line bg-cream p-5 shadow-soft">
+      <div className="text-3xl">{emoji}</div>
+      <h3 className="mt-2 font-serif text-lg font-semibold tracking-tight">{title}</h3>
+      <p className="mt-1 text-sm text-muted">{children}</p>
+    </div>
   );
 }

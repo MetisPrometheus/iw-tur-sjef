@@ -3,36 +3,52 @@
 @tailwind utilities;
 
 :root {
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-html,
-body {
-  background: #f8fafc;
-  color: #0f172a;
+html, body {
   height: 100%;
+  background: #faf6ef;
+  color: #2a2520;
+  overflow: hidden;
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-inter), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Prevent horizontal scroll on iOS Safari from off-screen tab panes. */
-html, body {
-  overflow-x: hidden;
+/* Grain & gradient texture for cream surfaces. */
+.grain {
+  background-image:
+    radial-gradient(at 18% 12%, rgba(244, 184, 156, 0.22) 0%, transparent 45%),
+    radial-gradient(at 82% 88%, rgba(124, 152, 133, 0.18) 0%, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(252, 211, 77, 0.08) 0%, transparent 60%);
 }
 
+/* Mapbox tweaks */
 .mapboxgl-popup-content {
-  border-radius: 12px;
-  padding: 10px 12px;
-  font-family: var(--font-sans);
-  color: #0f172a;
-  box-shadow: 0 10px 30px -10px rgba(15,23,42,0.2);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  color: #2a2520;
+  background: #faf6ef;
+  box-shadow: 0 16px 48px -12px rgba(42,37,32,0.35);
 }
+.mapboxgl-popup-tip { border-top-color: #faf6ef !important; }
+.mapboxgl-ctrl-attrib { font-size: 9px !important; opacity: 0.55; }
+.mapboxgl-ctrl-group { background: rgba(250,246,239,0.92) !important; backdrop-filter: blur(6px); }
 
-/* Nicer scrollbars on webkit. */
-*::-webkit-scrollbar { width: 10px; height: 10px; }
-*::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
-*::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+/* Scrollbars */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: rgba(42,37,32,0.18); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(42,37,32,0.32); }
 *::-webkit-scrollbar-track { background: transparent; }
+
+/* Horizontal scroll snap utility for ribbons / carousels */
+.snap-ribbon { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+.snap-ribbon > * { scroll-snap-align: start; }
+
+/* Hide scrollbar but keep scrollable */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }

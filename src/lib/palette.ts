@@ -1,17 +1,17 @@
-// Friendly, distinguishable participant colors. First-come-first-served when joining.
+// Friendly participant colors that work well on cream surfaces.
 export const PARTICIPANT_PALETTE = [
-  "#10b981",
-  "#6366f1",
-  "#f43f5e",
-  "#f59e0b",
-  "#8b5cf6",
-  "#06b6d4",
-  "#ec4899",
-  "#84cc16",
-  "#3b82f6",
-  "#f97316",
-  "#a855f7",
-  "#14b8a6",
+  "#c4633c", // rust
+  "#7c9885", // sage
+  "#dba94f", // honey
+  "#6883a6", // dusty blue
+  "#b06da5", // mauve
+  "#84a98c", // moss
+  "#d97757", // terracotta
+  "#5f7470", // pine
+  "#9c6644", // walnut
+  "#a8c0a3", // mint
+  "#8b5cf6", // violet
+  "#0e7490", // teal-deep
 ];
 
 export function nextColor(taken: string[]): string {
