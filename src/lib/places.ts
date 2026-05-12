@@ -47,7 +47,7 @@ export async function searchNearby(opts: {
       },
     },
   };
-  if (opts.includedType) body.includedTypes = [opts.includedType];
+  if (opts.includedType) body.includedPrimaryTypes = [opts.includedType];
   if (opts.keyword) body.textQuery = opts.keyword;
 
   const url = opts.keyword
