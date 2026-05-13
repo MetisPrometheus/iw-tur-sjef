@@ -3,11 +3,12 @@
 import { useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import type { Category, Stop, TripBundle } from "@/lib/types";
-import { CATEGORIES, CATEGORY_EMOJI, CATEGORY_LABEL } from "@/lib/types";
+import { CATEGORY_EMOJI, CATEGORY_LABEL } from "@/lib/types";
 import StopCarousel from "./StopCarousel";
 import CategoryTabs from "./CategoryTabs";
 import PinCard from "./PinCard";
-import AddSuggestionModal from "./AddSuggestionModal";
+
+export type SheetState = "hidden" | "peek" | "expanded";
 
 export default function TripSheet({
   bundle,
@@ -15,9 +16,12 @@ export default function TripSheet({
   meId,
   activeStopId,
   activeCategory,
+  sheetState,
+  onSheetStateChange,
   onPickStop,
   onPickCategory,
   onAddStop,
+  onBrowseCategory,
   onMutated,
   focusSuggestionId,
   onClearFocus,
@@ -27,18 +31,20 @@ export default function TripSheet({
   meId: string | null;
   activeStopId: string | null;
   activeCategory: Category;
+  sheetState: SheetState;
+  onSheetStateChange: (s: SheetState) => void;
   onPickStop: (id: string | null) => void;
   onPickCategory: (c: Category) => void;
   onAddStop: () => void;
+  onBrowseCategory: (category: Category) => void;
   onMutated: () => void;
   focusSuggestionId: string | null;
   onClearFocus: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const [addingFor, setAddingFor] = useState<Category | null>(null);
   const [dragY, setDragY] = useState(0);
   const dragStart = useRef<number | null>(null);
   const dragMoved = useRef(false);
+  const stateAtDragStart = useRef<SheetState>("peek");
 
   const activeStop = useMemo(
     () => bundle.stops.find((s) => s.id === activeStopId) ?? null,
@@ -63,40 +69,39 @@ export default function TripSheet({
       stopSuggestions
         .filter((s) => s.category === activeCategory)
         .sort((a, b) => {
-          // Pinned first, then by created order.
           if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
           return a.created_at.localeCompare(b.created_at);
         }),
     [stopSuggestions, activeCategory],
   );
 
-  const existingPlaceIds = useMemo(
-    () =>
-      new Set(
-        stopSuggestions
-          .filter((s) => s.category === activeCategory && s.place_id)
-          .map((s) => s.place_id as string),
-      ),
-    [stopSuggestions, activeCategory],
-  );
-
   function startDrag(clientY: number) {
     dragStart.current = clientY;
     dragMoved.current = false;
+    stateAtDragStart.current = sheetState;
   }
   function moveDrag(clientY: number) {
     if (dragStart.current == null) return;
     const dy = clientY - dragStart.current;
     if (Math.abs(dy) > 3) dragMoved.current = true;
-    setDragY(Math.max(dy, expanded ? -40 : 0));
+    // Cap negative drag if already expanded.
+    setDragY(Math.max(dy, stateAtDragStart.current === "expanded" ? -40 : -200));
   }
   function endDrag() {
     if (dragStart.current == null) return;
+    const dy = dragY;
     if (dragMoved.current) {
-      if (dragY > 80) setExpanded(false);
-      else if (dragY < -40) setExpanded(true);
+      const from = stateAtDragStart.current;
+      if (from === "expanded") {
+        if (dy > 100) onSheetStateChange("peek");
+      } else if (from === "peek") {
+        if (dy < -50) onSheetStateChange("expanded");
+        else if (dy > 80) onSheetStateChange("hidden");
+      }
     } else {
-      setExpanded((e) => !e);
+      // Tap handle: cycle peek ↔ expanded.
+      if (sheetState === "peek") onSheetStateChange("expanded");
+      else if (sheetState === "expanded") onSheetStateChange("peek");
     }
     dragStart.current = null;
     setDragY(0);
@@ -109,118 +114,106 @@ export default function TripSheet({
     onMutated();
   }
 
+  if (sheetState === "hidden") return null;
+
   return (
-    <>
-      <aside
-        className={clsx(
-          "pointer-events-auto fixed left-2 right-2 z-30 flex flex-col overflow-hidden rounded-t-4xl bg-cream shadow-sheet transition-all duration-300 sm:left-4 sm:right-4 md:left-auto md:right-4 md:top-24 md:bottom-4 md:w-[440px] md:rounded-4xl md:shadow-lift",
-          "bottom-0",
-          expanded ? "h-[80dvh] md:h-auto" : "h-[40dvh] md:h-auto",
-        )}
-        style={{
-          transform: dragY ? `translateY(${dragY}px)` : undefined,
-          transition: dragStart.current != null ? "none" : undefined,
-        }}
-      >
-        <div
-          className="flex shrink-0 cursor-grab justify-center pt-2 pb-1 active:cursor-grabbing md:hidden"
-          onPointerDown={(e) => {
-            (e.target as HTMLElement).setPointerCapture(e.pointerId);
-            startDrag(e.clientY);
-          }}
-          onPointerMove={(e) => moveDrag(e.clientY)}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-        >
-          <span className="h-1 w-12 rounded-full bg-line" />
-        </div>
-
-        {bundle.stops.length === 0 ? (
-          <EmptyState onAddStop={onAddStop} />
-        ) : (
-          <div className="flex flex-1 flex-col overflow-y-auto pb-3">
-            <StopCarousel
-              stops={bundle.stops}
-              activeStopId={activeStopId}
-              onPick={onPickStop}
-              onAdd={onAddStop}
-              onDelete={deleteStop}
-            />
-
-            {activeStop && <StopHeader stop={activeStop} />}
-
-            {activeStop && (
-              <div className="mt-2">
-                <CategoryTabs
-                  value={activeCategory}
-                  onChange={onPickCategory}
-                  counts={counts}
-                />
-              </div>
-            )}
-
-            {activeStop && categorySugs.length === 0 && (
-              <div className="mx-4 mt-3 grid place-items-center rounded-3xl border border-dashed border-line bg-cream/50 px-4 py-8 text-center">
-                <div className="text-3xl">{CATEGORY_EMOJI[activeCategory]}</div>
-                <p className="mt-2 text-sm text-muted">
-                  No {CATEGORY_LABEL[activeCategory].toLowerCase()} here yet.
-                </p>
-                <button
-                  onClick={() => setAddingFor(activeCategory)}
-                  className="mt-3 rounded-full bg-ink px-4 py-2 text-xs font-semibold text-cream transition active:scale-[0.97]"
-                >
-                  + Browse nearby
-                </button>
-              </div>
-            )}
-
-            {activeStop && categorySugs.length > 0 && (
-              <div className="flex gap-3 overflow-x-auto no-scrollbar snap-ribbon px-4 pt-3">
-                {categorySugs.map((s) => (
-                  <div
-                    key={s.id}
-                    className={clsx(
-                      "transition",
-                      focusSuggestionId === s.id && "ring-4 ring-rust/50 rounded-3xl",
-                    )}
-                    onClick={() => focusSuggestionId === s.id && onClearFocus()}
-                  >
-                    <PinCard
-                      suggestion={s}
-                      participants={bundle.participants}
-                      meId={meId}
-                      slug={slug}
-                      onMutated={onMutated}
-                    />
-                  </div>
-                ))}
-                <button
-                  onClick={() => setAddingFor(activeCategory)}
-                  className="flex w-[160px] shrink-0 flex-col items-center justify-center rounded-3xl border border-dashed border-line bg-cream/40 text-muted transition active:scale-[0.98] hover:border-ink hover:text-ink"
-                >
-                  <div className="text-3xl">＋</div>
-                  <div className="mt-1 text-xs font-semibold uppercase tracking-wider">
-                    Add more
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </aside>
-
-      {addingFor && activeStop && (
-        <AddSuggestionModal
-          stop={activeStop}
-          category={addingFor}
-          slug={slug}
-          meId={meId}
-          existingPlaceIds={existingPlaceIds}
-          onClose={() => setAddingFor(null)}
-          onAdded={onMutated}
-        />
+    <aside
+      className={clsx(
+        "pointer-events-auto fixed left-2 right-2 z-30 flex flex-col overflow-hidden rounded-t-4xl bg-cream shadow-sheet transition-all duration-300 sm:left-4 sm:right-4 md:left-auto md:right-4 md:top-24 md:bottom-4 md:w-[440px] md:rounded-4xl md:shadow-lift",
+        "bottom-0",
+        sheetState === "expanded" ? "h-[80dvh] md:h-auto" : "h-[42dvh] md:h-auto",
       )}
-    </>
+      style={{
+        transform: dragY ? `translateY(${dragY}px)` : undefined,
+        transition: dragStart.current != null ? "none" : undefined,
+      }}
+    >
+      <div
+        className="flex shrink-0 cursor-grab justify-center pt-2 pb-1 active:cursor-grabbing md:hidden"
+        onPointerDown={(e) => {
+          (e.target as HTMLElement).setPointerCapture(e.pointerId);
+          startDrag(e.clientY);
+        }}
+        onPointerMove={(e) => moveDrag(e.clientY)}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+      >
+        <span className="h-1 w-12 rounded-full bg-line" />
+      </div>
+
+      {bundle.stops.length === 0 ? (
+        <EmptyState onAddStop={onAddStop} />
+      ) : (
+        <div className="flex flex-1 flex-col overflow-y-auto pb-3">
+          <StopCarousel
+            stops={bundle.stops}
+            activeStopId={activeStopId}
+            onPick={onPickStop}
+            onAdd={onAddStop}
+            onDelete={deleteStop}
+          />
+
+          {activeStop && <StopHeader stop={activeStop} />}
+
+          {activeStop && (
+            <div className="mt-2">
+              <CategoryTabs
+                value={activeCategory}
+                onChange={onPickCategory}
+                counts={counts}
+              />
+            </div>
+          )}
+
+          {activeStop && categorySugs.length === 0 && (
+            <div className="mx-4 mt-3 grid place-items-center rounded-3xl border border-dashed border-line bg-cream/50 px-4 py-8 text-center">
+              <div className="text-3xl">{CATEGORY_EMOJI[activeCategory]}</div>
+              <p className="mt-2 text-sm text-muted">
+                No {CATEGORY_LABEL[activeCategory].toLowerCase()} here yet.
+              </p>
+              <button
+                onClick={() => onBrowseCategory(activeCategory)}
+                className="mt-3 rounded-full bg-ink px-4 py-2 text-xs font-semibold text-cream transition active:scale-[0.97]"
+              >
+                📍 Browse nearby
+              </button>
+            </div>
+          )}
+
+          {activeStop && categorySugs.length > 0 && (
+            <div className="flex gap-3 overflow-x-auto no-scrollbar snap-ribbon px-4 pt-3">
+              {categorySugs.map((s) => (
+                <div
+                  key={s.id}
+                  className={clsx(
+                    "transition",
+                    focusSuggestionId === s.id && "rounded-3xl ring-4 ring-rust/50",
+                  )}
+                  onClick={() => focusSuggestionId === s.id && onClearFocus()}
+                >
+                  <PinCard
+                    suggestion={s}
+                    participants={bundle.participants}
+                    meId={meId}
+                    slug={slug}
+                    onMutated={onMutated}
+                  />
+                </div>
+              ))}
+              <button
+                onClick={() => onBrowseCategory(activeCategory)}
+                className="flex w-[160px] shrink-0 flex-col items-center justify-center rounded-3xl border border-dashed border-line bg-cream/40 text-muted transition active:scale-[0.98] hover:border-ink hover:text-ink"
+              >
+                <div className="text-3xl">📍</div>
+                <div className="mt-1 text-xs font-semibold uppercase tracking-wider">
+                  Browse more
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </aside>
   );
 }
 
@@ -232,8 +225,8 @@ function EmptyState({ onAddStop }: { onAddStop: () => void }) {
         Drop your first stop
       </h2>
       <p className="mt-2 max-w-xs text-sm text-muted">
-        Search the town, set the dates, then star the hotels, food, drinks and
-        activities you want on the map.
+        Search a town, set the dates, then tap the pin to browse hotels, food,
+        drinks and activities.
       </p>
       <button
         onClick={onAddStop}
