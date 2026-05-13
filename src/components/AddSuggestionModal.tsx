@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import clsx from "clsx";
-import type { DaySlot, Stop } from "@/lib/types";
+import {
+  CATEGORIES,
+  CATEGORY_COLOR,
+  CATEGORY_EMOJI,
+  CATEGORY_LABEL,
+  type Category,
+  type Day,
+  type Stop,
+} from "@/lib/types";
 
 type NearbyPlace = {
   place_id: string;
@@ -18,20 +26,21 @@ type NearbyPlace = {
 };
 
 export default function AddSuggestionModal({
-  slot,
+  day,
   stop,
   slug,
   meId,
   onClose,
   onAdded,
 }: {
-  slot: DaySlot;
+  day: Day;
   stop: Stop;
   slug: string;
   meId: string | null;
   onClose: () => void;
   onAdded: () => void;
 }) {
+  const [category, setCategory] = useState<Category | null>(null);
   const [tab, setTab] = useState<"places" | "free">("places");
   const [q, setQ] = useState("");
   const [places, setPlaces] = useState<NearbyPlace[]>([]);
@@ -46,7 +55,7 @@ export default function AddSuggestionModal({
       const u = new URL("/api/places/nearby", window.location.origin);
       u.searchParams.set("lat", String(stop.lat));
       u.searchParams.set("lng", String(stop.lng));
-      u.searchParams.set("kind", slot.kind);
+      if (category) u.searchParams.set("category", category);
       if (keyword) u.searchParams.set("q", keyword);
       const r = await fetch(u.toString());
       const data = (await r.json()) as { places: NearbyPlace[] };
@@ -57,9 +66,9 @@ export default function AddSuggestionModal({
   }
 
   useEffect(() => {
-    void load();
+    void load(q || undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slot.id]);
+  }, [category]);
 
   async function addPlace(p: NearbyPlace) {
     if (!meId) return;
@@ -68,8 +77,9 @@ export default function AddSuggestionModal({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        slot_id: slot.id,
+        day_id: day.id,
         added_by: meId,
+        category,
         place_id: p.place_id,
         name: p.name,
         address: p.address,
@@ -91,8 +101,9 @@ export default function AddSuggestionModal({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        slot_id: slot.id,
+        day_id: day.id,
         added_by: meId,
+        category,
         name: freeName.trim(),
         note: freeNote.trim() || null,
       }),
@@ -113,18 +124,21 @@ export default function AddSuggestionModal({
         className="flex max-h-[90vh] w-full flex-col rounded-t-4xl bg-cream shadow-lift animate-slide-up sm:max-w-2xl sm:rounded-4xl"
         style={{ paddingBottom: "max(1rem, var(--safe-bottom))" }}
       >
-        {/* Grab handle (mobile) */}
         <div className="flex justify-center pt-2 pb-1 sm:hidden">
           <span className="h-1 w-10 rounded-full bg-line" />
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-5 pt-3 pb-2 sm:pt-5">
+        <div className="flex items-center justify-between gap-3 px-5 pt-3 pb-3 sm:pt-5">
           <div className="min-w-0">
             <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
               Suggest for {stop.name}
             </div>
             <h2 className="font-serif text-xl font-semibold tracking-tight">
-              {slot.label ?? "Pick a place"}
+              {day.label ||
+                new Date(day.date.slice(0, 10) + "T00:00:00").toLocaleDateString(
+                  undefined,
+                  { weekday: "long", month: "short", day: "numeric" },
+                )}
             </h2>
           </div>
           <button
@@ -133,6 +147,31 @@ export default function AddSuggestionModal({
           >
             ✕
           </button>
+        </div>
+
+        {/* Optional category tag picker */}
+        <div className="px-5 pb-3">
+          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            Tag it (optional)
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <CategoryChip
+              active={category === null}
+              onClick={() => setCategory(null)}
+              emoji="🌎"
+              label="anything"
+            />
+            {CATEGORIES.map((c) => (
+              <CategoryChip
+                key={c}
+                active={category === c}
+                onClick={() => setCategory(c)}
+                emoji={CATEGORY_EMOJI[c]}
+                label={CATEGORY_LABEL[c]}
+                color={CATEGORY_COLOR[c]}
+              />
+            ))}
+          </div>
         </div>
 
         <div className="flex gap-1 px-5 pb-3">
@@ -205,7 +244,7 @@ export default function AddSuggestionModal({
                         onClick={() => addPlace(p)}
                         className="mt-2 w-full rounded-xl bg-ink px-2 py-1.5 text-[11px] font-semibold text-cream transition active:scale-[0.97] disabled:opacity-40"
                       >
-                        {adding === p.place_id ? "adding…" : "Suggest"}
+                        {adding === p.place_id ? "adding…" : "Add"}
                       </button>
                     </div>
                   </li>
@@ -266,6 +305,36 @@ function Tab({
       )}
     >
       {children}
+    </button>
+  );
+}
+
+function CategoryChip({
+  active,
+  onClick,
+  emoji,
+  label,
+  color,
+}: {
+  active: boolean;
+  onClick: () => void;
+  emoji: string;
+  label: string;
+  color?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={clsx(
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition active:scale-[0.96]",
+        active
+          ? "border-transparent text-white shadow-soft"
+          : "border-line bg-cream text-ink hover:border-ink",
+      )}
+      style={active && color ? { background: color } : active ? { background: "#2a2520" } : undefined}
+    >
+      <span className="text-sm leading-none">{emoji}</span>
+      <span>{label}</span>
     </button>
   );
 }

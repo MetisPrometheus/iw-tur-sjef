@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
-import type { Suggestion } from "@/lib/types";
+import { CATEGORIES, type Suggestion } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 const Body = z.object({
-  slot_id: z.string().uuid(),
+  day_id: z.string().uuid(),
   added_by: z.string().uuid(),
+  category: z.enum(CATEGORIES as [string, ...string[]]).nullable().optional(),
   place_id: z.string().nullable().optional(),
   name: z.string().trim().min(1).max(200),
   address: z.string().nullable().optional(),
@@ -26,10 +27,10 @@ export async function POST(req: Request) {
   const d = parsed.data;
 
   const rows = await sql<Suggestion[]>`
-    INSERT INTO suggestion (slot_id, added_by, place_id, name, address, lat, lng, rating, photo_ref, url, note)
-    VALUES (${d.slot_id}, ${d.added_by}, ${d.place_id ?? null}, ${d.name}, ${d.address ?? null},
-            ${d.lat ?? null}, ${d.lng ?? null}, ${d.rating ?? null}, ${d.photo_ref ?? null},
-            ${d.url ?? null}, ${d.note ?? null})
+    INSERT INTO suggestion (day_id, added_by, category, place_id, name, address, lat, lng, rating, photo_ref, url, note)
+    VALUES (${d.day_id}, ${d.added_by}, ${d.category ?? null}, ${d.place_id ?? null},
+            ${d.name}, ${d.address ?? null}, ${d.lat ?? null}, ${d.lng ?? null},
+            ${d.rating ?? null}, ${d.photo_ref ?? null}, ${d.url ?? null}, ${d.note ?? null})
     RETURNING *
   `;
   return NextResponse.json(rows[0]);

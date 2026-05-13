@@ -24,10 +24,8 @@ export default function AtlasShell({
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
   const [activeDate, setActiveDate] = useState<string | null>(null);
-  const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [addingStop, setAddingStop] = useState(false);
 
-  // Join (or rejoin) once we know who we are.
   useEffect(() => {
     if (!clientId || !name || !bundle) return;
     const existing = bundle.participants.find((p) => p.client_id === clientId);
@@ -47,19 +45,10 @@ export default function AtlasShell({
       });
   }, [clientId, name, bundle, slug, mutate]);
 
-  // Default active stop = first.
   useEffect(() => {
     if (activeStopId && bundle.stops.some((s) => s.id === activeStopId)) return;
     setActiveStopId(bundle.stops[0]?.id ?? null);
   }, [bundle.stops, activeStopId]);
-
-  // Default active slot = first slot of active stop (only if user hasn't picked).
-  useEffect(() => {
-    if (activeSlotId) {
-      // Validate it still exists; clear if not.
-      if (!bundle.slots.some((s) => s.id === activeSlotId)) setActiveSlotId(null);
-    }
-  }, [bundle.slots, activeSlotId]);
 
   async function renameTrip(newName: string) {
     await fetch(`/api/trips/${slug}`, {
@@ -70,26 +59,14 @@ export default function AtlasShell({
     mutate();
   }
 
-  function pickStop(id: string | null) {
-    setActiveStopId(id);
-    setActiveSlotId(null);
-  }
-  function pickSlot(id: string) {
-    // Empty string means "go back to overview".
-    setActiveSlotId(id || null);
-  }
-
   return (
     <div className="relative h-[100dvh] w-full overflow-hidden bg-ink">
       <TripMap
         bundle={bundle}
-        activeSlotId={activeSlotId}
-        onStopClick={(id) => {
-          pickStop(id);
-        }}
+        activeStopId={activeStopId}
+        onStopClick={(id) => setActiveStopId(id)}
       />
 
-      {/* Floating chrome */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-3 sm:p-4">
         <TitlePlate trip={bundle.trip} slug={slug} onRename={renameTrip} />
         <TopRail participants={bundle.participants} meId={participantId} />
@@ -101,28 +78,25 @@ export default function AtlasShell({
         meId={participantId}
         activeStopId={activeStopId}
         activeDate={activeDate}
-        activeSlotId={activeSlotId}
-        onPickStop={pickStop}
+        onPickStop={setActiveStopId}
         onPickDate={setActiveDate}
-        onPickSlot={pickSlot}
-        onAddStop={() => setAdding(true)}
+        onAddStop={() => setAddingStop(true)}
         onMutated={mutate}
       />
 
-      {/* FAB on mobile to add a stop (when sheet collapsed). On desktop the sheet's own "+" handles it. */}
       <button
-        onClick={() => setAdding(true)}
-        className="pointer-events-auto fixed bottom-[36vh] right-4 z-20 grid h-14 w-14 place-items-center rounded-full bg-rust text-2xl text-white shadow-lift transition active:scale-[0.94] md:hidden"
+        onClick={() => setAddingStop(true)}
+        className="pointer-events-auto fixed right-4 z-20 grid h-14 w-14 place-items-center rounded-full bg-rust text-2xl text-white shadow-lift transition active:scale-[0.94] md:hidden"
         style={{ bottom: "calc(36dvh + 0.75rem)" }}
         aria-label="Add stop"
       >
         ＋
       </button>
 
-      {adding && (
+      {addingStop && (
         <AddStopModal
           slug={slug}
-          onClose={() => setAdding(false)}
+          onClose={() => setAddingStop(false)}
           onAdded={mutate}
         />
       )}

@@ -1,67 +1,56 @@
-export type SlotKind =
-  | "breakfast"
+export type Category =
+  | "food"
   | "coffee"
-  | "lunch"
   | "activity"
-  | "dinner"
-  | "drink"
   | "lodging"
-  | "custom";
+  | "drinks"
+  | "other";
 
-export const SLOT_KINDS: SlotKind[] = [
-  "breakfast",
+export const CATEGORIES: Category[] = [
+  "food",
   "coffee",
-  "lunch",
   "activity",
-  "dinner",
-  "drink",
   "lodging",
-  "custom",
+  "drinks",
+  "other",
 ];
 
-export const SLOT_LABEL: Record<SlotKind, string> = {
-  breakfast: "Breakfast",
+export const CATEGORY_LABEL: Record<Category, string> = {
+  food: "Food",
   coffee: "Coffee",
-  lunch: "Lunch",
   activity: "Activity",
-  dinner: "Dinner",
-  drink: "Drinks",
-  lodging: "Where to sleep",
-  custom: "Other",
+  lodging: "Stay",
+  drinks: "Drinks",
+  other: "Other",
 };
 
-// Map our slot kinds to Google Places "type" / "includedType" hints.
-export const SLOT_PLACE_TYPE: Record<SlotKind, string> = {
-  breakfast: "cafe",
-  coffee: "cafe",
-  lunch: "restaurant",
-  activity: "tourist_attraction",
-  dinner: "restaurant",
-  drink: "bar",
-  lodging: "lodging",
-  custom: "point_of_interest",
-};
-
-export const SLOT_EMOJI: Record<SlotKind, string> = {
-  breakfast: "🥐",
+export const CATEGORY_EMOJI: Record<Category, string> = {
+  food: "🍽️",
   coffee: "☕",
-  lunch: "🥗",
   activity: "🎒",
-  dinner: "🍝",
-  drink: "🍸",
   lodging: "🛏️",
-  custom: "✨",
+  drinks: "🍸",
+  other: "✨",
 };
 
-export const SLOT_COLOR: Record<SlotKind, string> = {
-  breakfast: "#f59e0b",
+export const CATEGORY_COLOR: Record<Category, string> = {
+  food: "#f43f5e",
   coffee: "#fb923c",
-  lunch: "#f43f5e",
   activity: "#6366f1",
-  dinner: "#ef4444",
-  drink: "#8b5cf6",
   lodging: "#10b981",
-  custom: "#94a3b8",
+  drinks: "#8b5cf6",
+  other: "#94a3b8",
+};
+
+// Google Places "primary type" we ask for given a chosen category.
+// null means "no type filter" — for "Other" we just do a generic text search.
+export const CATEGORY_PLACE_TYPE: Record<Category, string | null> = {
+  food: "restaurant",
+  coffee: "cafe",
+  activity: "tourist_attraction",
+  lodging: "lodging",
+  drinks: "bar",
+  other: null,
 };
 
 export type Trip = {
@@ -92,22 +81,19 @@ export type Stop = {
   depart_date: string | null;
 };
 
-export type DaySlot = {
+export type Day = {
   id: string;
   stop_id: string;
   date: string;
-  kind: SlotKind;
   label: string | null;
   capacity: number;
-  time_start: string | null;
-  time_end: string | null;
-  order_index: number;
 };
 
 export type Suggestion = {
   id: string;
-  slot_id: string;
+  day_id: string;
   added_by: string;
+  category: Category | null;
   place_id: string | null;
   name: string;
   address: string | null;
@@ -131,7 +117,7 @@ export type TripBundle = {
   trip: Trip;
   participants: Participant[];
   stops: Stop[];
-  slots: DaySlot[];
+  days: Day[];
   suggestions: Suggestion[];
   votes: Vote[];
 };

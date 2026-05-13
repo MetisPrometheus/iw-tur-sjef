@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import mapboxgl from "mapbox-gl";
-import type { TripBundle, SlotKind } from "@/lib/types";
-import { SLOT_COLOR } from "@/lib/types";
+import type { TripBundle, Category } from "@/lib/types";
+import { CATEGORY_COLOR } from "@/lib/types";
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
@@ -12,16 +12,16 @@ type Winner = {
   lat: number;
   lng: number;
   name: string;
-  kind: SlotKind;
+  category: Category | null;
 };
 
 export default function TripMap({
   bundle,
-  activeSlotId,
+  activeStopId,
   onStopClick,
 }: {
   bundle: TripBundle;
-  activeSlotId: string | null;
+  activeStopId?: string | null;
   onStopClick?: (stopId: string) => void;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -31,22 +31,22 @@ export default function TripMap({
 
   const winners: Winner[] = useMemo(() => {
     const out: Winner[] = [];
-    const slotById = new Map(bundle.slots.map((s) => [s.id, s]));
+    const dayById = new Map(bundle.days.map((d) => [d.id, d]));
     const byId = new Map(bundle.suggestions.map((s) => [s.id, s]));
     const counts: Record<string, number> = {};
     for (const v of bundle.votes) counts[v.suggestion_id] = (counts[v.suggestion_id] ?? 0) + 1;
 
-    const bySlot = new Map<string, string[]>();
+    const byDay = new Map<string, string[]>();
     for (const s of bundle.suggestions) {
-      const arr = bySlot.get(s.slot_id) ?? [];
+      const arr = byDay.get(s.day_id) ?? [];
       arr.push(s.id);
-      bySlot.set(s.slot_id, arr);
+      byDay.set(s.day_id, arr);
     }
-    for (const [slotId, ids] of bySlot) {
-      const slot = slotById.get(slotId);
-      if (!slot) continue;
+    for (const [dayId, ids] of byDay) {
+      const day = dayById.get(dayId);
+      if (!day) continue;
       const sorted = ids.slice().sort((a, b) => (counts[b] ?? 0) - (counts[a] ?? 0));
-      for (let i = 0; i < Math.min(slot.capacity, sorted.length); i++) {
+      for (let i = 0; i < Math.min(day.capacity, sorted.length); i++) {
         const s = byId.get(sorted[i])!;
         if (s.lat == null || s.lng == null) continue;
         if ((counts[s.id] ?? 0) === 0) continue;
@@ -55,12 +55,12 @@ export default function TripMap({
           lat: s.lat,
           lng: s.lng,
           name: s.name,
-          kind: slot.kind as SlotKind,
+          category: (s.category as Category | null) ?? null,
         });
       }
     }
     return out;
-  }, [bundle.slots, bundle.suggestions, bundle.votes]);
+  }, [bundle.days, bundle.suggestions, bundle.votes]);
 
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
@@ -80,7 +80,6 @@ export default function TripMap({
     );
 
     map.on("style.load", () => {
-      // Warm dusk fog: rosy horizon, deep navy space.
       map.setFog({
         color: "rgb(252, 232, 207)",
         "high-color": "rgb(196, 99, 60)",
@@ -137,6 +136,7 @@ export default function TripMap({
 
     bundle.stops.forEach((stop, i) => {
       const letter = String.fromCharCode(65 + i);
+      const isActive = stop.id === activeStopId;
       const el = document.createElement("button");
       el.type = "button";
       el.setAttribute("aria-label", stop.name);
@@ -149,16 +149,16 @@ export default function TripMap({
           position: relative;
           display: grid;
           place-items: center;
-          width: 38px;
-          height: 38px;
+          width: ${isActive ? 44 : 36}px;
+          height: ${isActive ? 44 : 36}px;
           border-radius: 999px;
           background: linear-gradient(135deg, #fcd34d 0%, #c4633c 95%);
           color: #2a2520;
           font-weight: 800;
-          font-size: 14px;
+          font-size: ${isActive ? 16 : 13}px;
           box-shadow:
             0 0 0 3px #faf6ef,
-            0 0 24px 6px rgba(252,211,77,0.55),
+            0 0 ${isActive ? 32 : 20}px ${isActive ? 8 : 5}px rgba(252,211,77,0.55),
             0 8px 18px -4px rgba(42,37,32,0.55);
           font-family: var(--font-fraunces), serif;
         ">${letter}</span>
@@ -181,9 +181,10 @@ export default function TripMap({
     });
 
     winners.forEach((w) => {
+      const color = w.category ? CATEGORY_COLOR[w.category] : "#94a3b8";
       const el = document.createElement("div");
       Object.assign(el.style, {
-        background: SLOT_COLOR[w.kind],
+        background: color,
         width: "16px",
         height: "16px",
         borderRadius: "999px",
@@ -215,7 +216,7 @@ export default function TripMap({
     } else if (pts.length === 1) {
       map.flyTo({ center: pts[0], zoom: 8, duration: 1200 });
     }
-  }, [bundle.stops, winners, onStopClick]);
+  }, [bundle.stops, winners, activeStopId, onStopClick]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -256,13 +257,11 @@ export default function TripMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !activeSlotId) return;
-    const slot = bundle.slots.find((s) => s.id === activeSlotId);
-    if (!slot) return;
-    const stop = bundle.stops.find((s) => s.id === slot.stop_id);
+    if (!map || !activeStopId) return;
+    const stop = bundle.stops.find((s) => s.id === activeStopId);
     if (!stop) return;
-    map.flyTo({ center: [stop.lng, stop.lat], zoom: 11, duration: 1400, essential: true });
-  }, [activeSlotId, bundle.slots, bundle.stops]);
+    map.flyTo({ center: [stop.lng, stop.lat], zoom: 9, duration: 1400, essential: true });
+  }, [activeStopId, bundle.stops]);
 
   return <div ref={ref} className="absolute inset-0" />;
 }

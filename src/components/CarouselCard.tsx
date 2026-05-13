@@ -1,7 +1,15 @@
 "use client";
 
 import clsx from "clsx";
-import type { Participant, Suggestion, Vote } from "@/lib/types";
+import {
+  CATEGORY_COLOR,
+  CATEGORY_EMOJI,
+  CATEGORY_LABEL,
+  type Category,
+  type Participant,
+  type Suggestion,
+  type Vote,
+} from "@/lib/types";
 
 export default function CarouselCard({
   suggestion,
@@ -22,6 +30,7 @@ export default function CarouselCard({
 }) {
   const author = participants.find((p) => p.id === suggestion.added_by);
   const myVote = meId ? votes.some((v) => v.participant_id === meId) : false;
+  const cat = (suggestion.category as Category | null) ?? null;
 
   async function toggleVote() {
     if (!meId) return;
@@ -57,10 +66,21 @@ export default function CarouselCard({
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="grid h-full w-full place-items-center text-3xl">📍</div>
+          <div className="grid h-full w-full place-items-center text-3xl">
+            {cat ? CATEGORY_EMOJI[cat] : "📍"}
+          </div>
+        )}
+        {cat && (
+          <span
+            className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-cream/95 px-2 py-0.5 text-[10px] font-semibold backdrop-blur-md"
+            style={{ color: CATEGORY_COLOR[cat] }}
+          >
+            <span className="text-xs leading-none">{CATEGORY_EMOJI[cat]}</span>
+            <span>{CATEGORY_LABEL[cat]}</span>
+          </span>
         )}
         {isWinner && (
-          <span className="absolute left-3 top-3 rounded-full bg-sage px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow">
+          <span className="absolute left-3 bottom-3 rounded-full bg-sage px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow">
             Winner
           </span>
         )}

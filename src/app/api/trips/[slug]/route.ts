@@ -5,7 +5,7 @@ import type {
   Trip,
   Participant,
   Stop,
-  DaySlot,
+  Day,
   Suggestion,
   Vote,
   TripBundle,
@@ -24,32 +24,32 @@ export async function GET(
   }
   const trip = trips[0];
 
-  const [participants, stops, slots, suggestions, votes] = await Promise.all([
+  const [participants, stops, days, suggestions, votes] = await Promise.all([
     sql<Participant[]>`SELECT * FROM participant WHERE trip_id = ${trip.id} ORDER BY created_at`,
     sql<Stop[]>`SELECT * FROM stop WHERE trip_id = ${trip.id} ORDER BY order_index`,
-    sql<DaySlot[]>`
-      SELECT s.* FROM day_slot s
-      JOIN stop st ON st.id = s.stop_id
+    sql<Day[]>`
+      SELECT d.* FROM day d
+      JOIN stop st ON st.id = d.stop_id
       WHERE st.trip_id = ${trip.id}
-      ORDER BY s.date, s.order_index
+      ORDER BY d.date
     `,
     sql<Suggestion[]>`
       SELECT sg.* FROM suggestion sg
-      JOIN day_slot s ON s.id = sg.slot_id
-      JOIN stop st ON st.id = s.stop_id
+      JOIN day d ON d.id = sg.day_id
+      JOIN stop st ON st.id = d.stop_id
       WHERE st.trip_id = ${trip.id}
       ORDER BY sg.created_at
     `,
     sql<Vote[]>`
       SELECT v.* FROM vote v
       JOIN suggestion sg ON sg.id = v.suggestion_id
-      JOIN day_slot s ON s.id = sg.slot_id
-      JOIN stop st ON st.id = s.stop_id
+      JOIN day d ON d.id = sg.day_id
+      JOIN stop st ON st.id = d.stop_id
       WHERE st.trip_id = ${trip.id}
     `,
   ]);
 
-  const bundle: TripBundle = { trip, participants, stops, slots, suggestions, votes };
+  const bundle: TripBundle = { trip, participants, stops, days, suggestions, votes };
   return NextResponse.json(bundle);
 }
 
