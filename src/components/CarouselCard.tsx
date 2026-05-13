@@ -124,7 +124,9 @@ export default function CarouselCard({
         <div className="mt-auto flex items-center justify-between pt-3 text-[11px] text-muted">
           <div className="flex items-center gap-1.5">
             {suggestion.rating != null && (
-              <span className="font-semibold text-ink">★ {suggestion.rating.toFixed(1)}</span>
+              <span className="font-semibold text-ink">
+                ★ {Number(suggestion.rating).toFixed(1)}
+              </span>
             )}
             {author && (
               <span className="flex items-center gap-1">

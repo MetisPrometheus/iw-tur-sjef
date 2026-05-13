@@ -232,7 +232,7 @@ export default function AddSuggestionModal({
                       <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted">
                         {p.rating != null && (
                           <span className="font-semibold text-ink">
-                            ★ {p.rating.toFixed(1)}
+                            ★ {Number(p.rating).toFixed(1)}
                           </span>
                         )}
                         {p.price_level != null && (

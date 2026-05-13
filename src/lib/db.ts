@@ -14,6 +14,17 @@ function init(): ReturnType<typeof postgres> {
     idle_timeout: 20,
     connect_timeout: 10,
     prepare: false,
+    types: {
+      // Parse NUMERIC (oid 1700) as JS number — we don't store anything where
+      // float precision matters, and the default string return blows up calls
+      // like `rating.toFixed(1)` on the client.
+      numeric: {
+        to: 1700,
+        from: [1700],
+        serialize: (n: number) => String(n),
+        parse: (s: string) => Number(s),
+      },
+    },
   });
   if (process.env.NODE_ENV !== "production") global.__pg = client;
   else global.__pg = client;
