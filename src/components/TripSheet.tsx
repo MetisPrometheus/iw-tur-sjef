@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import type { Day, Stop, TripBundle } from "@/lib/types";
+import type { Category, Stop, TripBundle } from "@/lib/types";
+import { CATEGORIES, CATEGORY_EMOJI, CATEGORY_LABEL } from "@/lib/types";
 import StopCarousel from "./StopCarousel";
-import DayRibbon from "./DayRibbon";
-import CarouselCard from "./CarouselCard";
+import CategoryTabs from "./CategoryTabs";
+import PinCard from "./PinCard";
 import AddSuggestionModal from "./AddSuggestionModal";
 
 export default function TripSheet({
@@ -13,24 +14,28 @@ export default function TripSheet({
   slug,
   meId,
   activeStopId,
-  activeDate,
+  activeCategory,
   onPickStop,
-  onPickDate,
+  onPickCategory,
   onAddStop,
   onMutated,
+  focusSuggestionId,
+  onClearFocus,
 }: {
   bundle: TripBundle;
   slug: string;
   meId: string | null;
   activeStopId: string | null;
-  activeDate: string | null;
+  activeCategory: Category;
   onPickStop: (id: string | null) => void;
-  onPickDate: (d: string) => void;
+  onPickCategory: (c: Category) => void;
   onAddStop: () => void;
   onMutated: () => void;
+  focusSuggestionId: string | null;
+  onClearFocus: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [adding, setAdding] = useState(false);
+  const [addingFor, setAddingFor] = useState<Category | null>(null);
   const [dragY, setDragY] = useState(0);
   const dragStart = useRef<number | null>(null);
   const dragMoved = useRef(false);
@@ -40,52 +45,40 @@ export default function TripSheet({
     [bundle.stops, activeStopId],
   );
 
-  // Days for this stop.
-  const stopDays = useMemo(
+  const stopSuggestions = useMemo(
+    () => (activeStop ? bundle.suggestions.filter((s) => s.stop_id === activeStop.id) : []),
+    [bundle.suggestions, activeStop],
+  );
+
+  const counts: Partial<Record<Category, number>> = useMemo(() => {
+    const c: Partial<Record<Category, number>> = {};
+    for (const s of stopSuggestions) {
+      if (s.is_pinned) c[s.category] = (c[s.category] ?? 0) + 1;
+    }
+    return c;
+  }, [stopSuggestions]);
+
+  const categorySugs = useMemo(
     () =>
-      activeStop
-        ? bundle.days
-            .filter((d) => d.stop_id === activeStop.id)
-            .sort((a, b) => a.date.localeCompare(b.date))
-        : [],
-    [bundle.days, activeStop],
+      stopSuggestions
+        .filter((s) => s.category === activeCategory)
+        .sort((a, b) => {
+          // Pinned first, then by created order.
+          if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+          return a.created_at.localeCompare(b.created_at);
+        }),
+    [stopSuggestions, activeCategory],
   );
 
-  // Auto-pick first day when stop changes.
-  useEffect(() => {
-    if (!stopDays.length) return;
-    if (activeDate && stopDays.some((d) => d.date.startsWith(activeDate))) return;
-    onPickDate(stopDays[0].date.slice(0, 10));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStopId, stopDays.length]);
-
-  const activeDay = useMemo(
-    () => stopDays.find((d) => d.date.startsWith(activeDate ?? "")) ?? stopDays[0] ?? null,
-    [stopDays, activeDate],
+  const existingPlaceIds = useMemo(
+    () =>
+      new Set(
+        stopSuggestions
+          .filter((s) => s.category === activeCategory && s.place_id)
+          .map((s) => s.place_id as string),
+      ),
+    [stopSuggestions, activeCategory],
   );
-
-  // Suggestions for the active day, sorted by votes.
-  const sugs = useMemo(() => {
-    if (!activeDay) return [];
-    return bundle.suggestions
-      .filter((s) => s.day_id === activeDay.id)
-      .map((s) => ({
-        s,
-        votes: bundle.votes.filter((v) => v.suggestion_id === s.id),
-      }))
-      .sort(
-        (a, b) =>
-          b.votes.length - a.votes.length ||
-          a.s.created_at.localeCompare(b.s.created_at),
-      );
-  }, [activeDay, bundle.suggestions, bundle.votes]);
-
-  const winners = useMemo(() => {
-    if (!activeDay) return new Set<string>();
-    return new Set(
-      sugs.slice(0, activeDay.capacity).filter((x) => x.votes.length > 0).map((x) => x.s.id),
-    );
-  }, [activeDay, sugs]);
 
   function startDrag(clientY: number) {
     dragStart.current = clientY;
@@ -109,45 +102,8 @@ export default function TripSheet({
     setDragY(0);
   }
 
-  async function addDay() {
-    if (!activeStop) return;
-    const date = prompt(
-      "Date for this day (YYYY-MM-DD)?",
-      activeStop.arrival_date?.slice(0, 10) ?? "",
-    );
-    if (!date) return;
-    await fetch(`/api/trips/${slug}/days`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stop_id: activeStop.id, date }),
-    });
-    onPickDate(date);
-    onMutated();
-  }
-
-  async function setCapacity(c: number) {
-    if (!activeDay) return;
-    const clamped = Math.max(1, Math.min(20, c));
-    await fetch(`/api/trips/${slug}/days/${activeDay.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ capacity: clamped }),
-    });
-    onMutated();
-  }
-
-  async function setLabel(label: string) {
-    if (!activeDay) return;
-    await fetch(`/api/trips/${slug}/days/${activeDay.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label }),
-    });
-    onMutated();
-  }
-
   async function deleteStop(stopId: string) {
-    if (!confirm("Remove this stop and all its days?")) return;
+    if (!confirm("Remove this stop and everything pinned to it?")) return;
     await fetch(`/api/trips/${slug}/stops/${stopId}`, { method: "DELETE" });
     onPickStop(null);
     onMutated();
@@ -157,9 +113,9 @@ export default function TripSheet({
     <>
       <aside
         className={clsx(
-          "pointer-events-auto fixed left-2 right-2 z-30 flex flex-col overflow-hidden rounded-t-4xl bg-cream shadow-sheet transition-all duration-300 sm:left-4 sm:right-4 md:left-auto md:right-4 md:top-24 md:bottom-4 md:w-[420px] md:rounded-4xl md:shadow-lift",
+          "pointer-events-auto fixed left-2 right-2 z-30 flex flex-col overflow-hidden rounded-t-4xl bg-cream shadow-sheet transition-all duration-300 sm:left-4 sm:right-4 md:left-auto md:right-4 md:top-24 md:bottom-4 md:w-[440px] md:rounded-4xl md:shadow-lift",
           "bottom-0",
-          expanded ? "h-[78dvh] md:h-auto" : "h-[36dvh] md:h-auto",
+          expanded ? "h-[80dvh] md:h-auto" : "h-[40dvh] md:h-auto",
         )}
         style={{
           transform: dragY ? `translateY(${dragY}px)` : undefined,
@@ -191,84 +147,60 @@ export default function TripSheet({
               onDelete={deleteStop}
             />
 
+            {activeStop && <StopHeader stop={activeStop} />}
+
             {activeStop && (
-              <div className="mt-3 px-4">
-                <h2 className="font-serif text-2xl font-semibold leading-tight tracking-tight">
-                  {activeStop.name}
-                </h2>
+              <div className="mt-2">
+                <CategoryTabs
+                  value={activeCategory}
+                  onChange={onPickCategory}
+                  counts={counts}
+                />
               </div>
             )}
 
-            {activeStop && stopDays.length > 0 && (
-              <DayRibbon
-                dates={stopDays.map((d) => d.date.slice(0, 10))}
-                activeDate={activeDate}
-                onPick={onPickDate}
-                onAdd={addDay}
-              />
-            )}
-
-            {activeStop && stopDays.length === 0 && (
+            {activeStop && categorySugs.length === 0 && (
               <div className="mx-4 mt-3 grid place-items-center rounded-3xl border border-dashed border-line bg-cream/50 px-4 py-8 text-center">
-                <div className="text-3xl">📅</div>
+                <div className="text-3xl">{CATEGORY_EMOJI[activeCategory]}</div>
                 <p className="mt-2 text-sm text-muted">
-                  no days yet for {activeStop.name}
+                  No {CATEGORY_LABEL[activeCategory].toLowerCase()} here yet.
                 </p>
                 <button
-                  onClick={addDay}
+                  onClick={() => setAddingFor(activeCategory)}
                   className="mt-3 rounded-full bg-ink px-4 py-2 text-xs font-semibold text-cream transition active:scale-[0.97]"
                 >
-                  ＋ Add first day
+                  + Browse nearby
                 </button>
               </div>
             )}
 
-            {activeDay && (
-              <DayHeader
-                day={activeDay}
-                count={sugs.length}
-                onCapacity={setCapacity}
-                onLabel={setLabel}
-                onSuggest={() => setAdding(true)}
-              />
-            )}
-
-            {activeDay && sugs.length === 0 && (
-              <div className="mx-4 mt-2 grid place-items-center rounded-3xl border border-dashed border-line bg-cream/50 px-4 py-8 text-center">
-                <div className="text-3xl">💭</div>
-                <p className="mt-2 text-sm text-muted">
-                  Nothing pitched yet. Throw stuff in — anything.
-                </p>
-                <button
-                  onClick={() => setAdding(true)}
-                  className="mt-3 rounded-full bg-ink px-4 py-2 text-xs font-semibold text-cream transition active:scale-[0.97]"
-                >
-                  ＋ Suggest something
-                </button>
-              </div>
-            )}
-
-            {activeDay && sugs.length > 0 && (
-              <div className="flex gap-3 overflow-x-auto no-scrollbar snap-ribbon px-4 pt-1">
-                {sugs.map(({ s, votes }) => (
-                  <CarouselCard
+            {activeStop && categorySugs.length > 0 && (
+              <div className="flex gap-3 overflow-x-auto no-scrollbar snap-ribbon px-4 pt-3">
+                {categorySugs.map((s) => (
+                  <div
                     key={s.id}
-                    suggestion={s}
-                    votes={votes}
-                    participants={bundle.participants}
-                    meId={meId}
-                    slug={slug}
-                    isWinner={winners.has(s.id)}
-                    onMutated={onMutated}
-                  />
+                    className={clsx(
+                      "transition",
+                      focusSuggestionId === s.id && "ring-4 ring-rust/50 rounded-3xl",
+                    )}
+                    onClick={() => focusSuggestionId === s.id && onClearFocus()}
+                  >
+                    <PinCard
+                      suggestion={s}
+                      participants={bundle.participants}
+                      meId={meId}
+                      slug={slug}
+                      onMutated={onMutated}
+                    />
+                  </div>
                 ))}
                 <button
-                  onClick={() => setAdding(true)}
-                  className="flex w-[180px] shrink-0 flex-col items-center justify-center rounded-3xl border border-dashed border-line bg-cream/40 text-muted transition active:scale-[0.98] hover:border-ink hover:text-ink"
+                  onClick={() => setAddingFor(activeCategory)}
+                  className="flex w-[160px] shrink-0 flex-col items-center justify-center rounded-3xl border border-dashed border-line bg-cream/40 text-muted transition active:scale-[0.98] hover:border-ink hover:text-ink"
                 >
                   <div className="text-3xl">＋</div>
                   <div className="mt-1 text-xs font-semibold uppercase tracking-wider">
-                    Suggest
+                    Add more
                   </div>
                 </button>
               </div>
@@ -277,16 +209,15 @@ export default function TripSheet({
         )}
       </aside>
 
-      {adding && activeDay && activeStop && (
+      {addingFor && activeStop && (
         <AddSuggestionModal
-          day={activeDay}
           stop={activeStop}
+          category={addingFor}
           slug={slug}
           meId={meId}
-          onClose={() => setAdding(false)}
-          onAdded={() => {
-            onMutated();
-          }}
+          existingPlaceIds={existingPlaceIds}
+          onClose={() => setAddingFor(null)}
+          onAdded={onMutated}
         />
       )}
     </>
@@ -301,100 +232,55 @@ function EmptyState({ onAddStop }: { onAddStop: () => void }) {
         Drop your first stop
       </h2>
       <p className="mt-2 max-w-xs text-sm text-muted">
-        A road trip starts somewhere. Search a town, pick a date — then
-        pitch the options and let the crew vote.
+        Search the town, set the dates, then star the hotels, food, drinks and
+        activities you want on the map.
       </p>
       <button
         onClick={onAddStop}
         className="mt-5 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-cream shadow-soft transition active:scale-[0.97]"
       >
-        ＋ Add stop
+        + Add stop
       </button>
     </div>
   );
 }
 
-function DayHeader({
-  day,
-  count,
-  onCapacity,
-  onLabel,
-  onSuggest,
-}: {
-  day: Day;
-  count: number;
-  onCapacity: (c: number) => void;
-  onLabel: (l: string) => void;
-  onSuggest: () => void;
-}) {
-  const dt = new Date(day.date.slice(0, 10) + "T00:00:00");
-  const dateLabel = dt.toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
-  const [editingLabel, setEditingLabel] = useState(false);
-  const [draftLabel, setDraftLabel] = useState(day.label ?? "");
-
+function StopHeader({ stop }: { stop: Stop }) {
+  const range = stopDateRange(stop);
   return (
-    <div className="flex items-end justify-between gap-2 px-4 pt-3 pb-2">
-      <div className="min-w-0">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-          {dateLabel}
+    <div className="mt-3 px-4">
+      <h2 className="font-serif text-2xl font-semibold leading-tight tracking-tight">
+        {stop.name}
+      </h2>
+      {range && (
+        <div className="mt-0.5 text-[11px] font-medium uppercase tracking-wider text-muted">
+          {range}
         </div>
-        {editingLabel ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              onLabel(draftLabel.trim());
-              setEditingLabel(false);
-            }}
-          >
-            <input
-              autoFocus
-              value={draftLabel}
-              onChange={(e) => setDraftLabel(e.target.value)}
-              onBlur={() => {
-                onLabel(draftLabel.trim());
-                setEditingLabel(false);
-              }}
-              maxLength={60}
-              placeholder="add a label"
-              className="w-full bg-transparent font-serif text-lg font-semibold tracking-tight text-ink outline-none"
-            />
-          </form>
-        ) : (
-          <button
-            onClick={() => {
-              setDraftLabel(day.label ?? "");
-              setEditingLabel(true);
-            }}
-            className="text-left font-serif text-lg font-semibold leading-tight tracking-tight text-ink hover:text-rust"
-          >
-            {day.label || "untitled day"}
-          </button>
-        )}
-        <div className="mt-0.5 text-[11px] text-muted">
-          {count} suggestion{count === 1 ? "" : "s"} · top{" "}
-          <button
-            onClick={() => {
-              const v = prompt("How many winners?", String(day.capacity));
-              const n = v ? parseInt(v, 10) : NaN;
-              if (Number.isFinite(n)) onCapacity(n);
-            }}
-            className="font-semibold text-ink hover:text-rust"
-          >
-            {day.capacity}
-          </button>{" "}
-          win
-        </div>
-      </div>
-      <button
-        onClick={onSuggest}
-        className="shrink-0 rounded-full bg-rust px-4 py-2 text-xs font-semibold text-white shadow-soft transition active:scale-[0.96] hover:bg-rust-dark"
-      >
-        ＋ Suggest
-      </button>
+      )}
     </div>
   );
+}
+
+function stopDateRange(stop: Stop): string | null {
+  if (!stop.start_date) return null;
+  const start = new Date(stop.start_date.slice(0, 10) + "T00:00:00");
+  const end = stop.end_date
+    ? new Date(stop.end_date.slice(0, 10) + "T00:00:00")
+    : null;
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  if (!end || end.getTime() === start.getTime()) {
+    return start.toLocaleDateString(undefined, {
+      ...opts,
+      weekday: "short",
+    });
+  }
+  const sameMonth = start.getMonth() === end.getMonth();
+  const startLabel = sameMonth
+    ? start.toLocaleDateString(undefined, { day: "numeric" })
+    : start.toLocaleDateString(undefined, opts);
+  const endLabel = end.toLocaleDateString(undefined, opts);
+  const nights = Math.round(
+    (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  return `${startLabel}–${endLabel} · ${nights} night${nights === 1 ? "" : "s"}`;
 }

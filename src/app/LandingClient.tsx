@@ -1,14 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getClientId } from "@/lib/client-id";
+
+type GeocodeHit = {
+  name: string;
+  place_name: string;
+  lat: number;
+  lng: number;
+};
 
 export default function LandingClient() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [destinationQuery, setDestinationQuery] = useState("");
+  const [destination, setDestination] = useState<GeocodeHit | null>(null);
+  const [hits, setHits] = useState<GeocodeHit[]>([]);
+  const [showHits, setShowHits] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [joinSlug, setJoinSlug] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (destination && destinationQuery === destination.place_name) {
+      setHits([]);
+      return;
+    }
+    if (!destinationQuery.trim()) {
+      setHits([]);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      const r = await fetch(
+        `/api/geocode?q=${encodeURIComponent(destinationQuery)}`,
+      );
+      const data = (await r.json()) as { hits: GeocodeHit[] };
+      setHits(data.hits ?? []);
+    }, 250);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [destinationQuery, destination]);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -19,7 +56,15 @@ export default function LandingClient() {
       const r = await fetch("/api/trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({
+          name: name.trim(),
+          start_date: startDate || null,
+          end_date: endDate || null,
+          boss_client_id: getClientId(),
+          destination: destination
+            ? { name: destination.name, lat: destination.lat, lng: destination.lng }
+            : null,
+        }),
       });
       if (!r.ok) throw new Error(await r.text());
       const { slug } = (await r.json()) as { slug: string };
@@ -42,18 +87,18 @@ export default function LandingClient() {
         <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-rust-dark">
           tur-sjef · a road-trip atlas
         </div>
-        <h1 className="mt-4 font-serif text-[2.75rem] font-semibold leading-[1.02] tracking-tight sm:text-7xl">
+        <h1 className="mt-4 font-serif text-[2.5rem] font-semibold leading-[1.02] tracking-tight sm:text-6xl">
           Plan the road,
           <br />
           <span className="italic text-rust">together.</span>
         </h1>
-        <p className="mt-6 max-w-xl text-base text-ink/75 sm:text-lg">
-          Drop your stops on a globe. Pull nearby gems from Google. Let your friends
-          pitch what to eat, what to do, where to sleep — and vote. The winners hit
-          the atlas. No accounts; just a link the crew shares.
+        <p className="mt-5 max-w-xl text-base text-ink/75 sm:text-lg">
+          Pick where you&apos;re going, drop pins on a satellite globe, fill each
+          stop with hotels, food, drinks and activities — keep the best ones,
+          drop the rest.
         </p>
 
-        <div className="mt-10 grid gap-5 sm:mt-14 sm:grid-cols-2 sm:gap-7">
+        <div className="mt-10 grid gap-5 sm:mt-14 sm:grid-cols-[1.4fr_1fr] sm:gap-7">
           <form
             onSubmit={create}
             className="relative overflow-hidden rounded-4xl border border-line bg-cream p-6 shadow-soft transition hover:shadow-lift sm:p-8"
@@ -69,20 +114,83 @@ export default function LandingClient() {
             <h2 className="mt-2 font-serif text-2xl font-semibold tracking-tight">
               Begin a new trip
             </h2>
-            <p className="mt-1 text-sm text-muted">
-              You&apos;ll get a slug to share with the crew.
-            </p>
+
+            <Label>What are you calling it?</Label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Lofoten i juli"
-              className="mt-5 w-full rounded-2xl border border-line bg-cream px-4 py-3 text-base outline-none focus:border-rust"
+              className="w-full rounded-2xl border border-line bg-cream px-4 py-3 text-base outline-none focus:border-rust"
               maxLength={80}
             />
+
+            <Label>Where are you going?</Label>
+            <div className="relative">
+              <input
+                value={destinationQuery}
+                onChange={(e) => {
+                  setDestinationQuery(e.target.value);
+                  setDestination(null);
+                  setShowHits(true);
+                }}
+                onFocus={() => setShowHits(true)}
+                onBlur={() => setTimeout(() => setShowHits(false), 150)}
+                placeholder="A town, region, country…"
+                className="w-full rounded-2xl border border-line bg-cream px-4 py-3 text-base outline-none focus:border-rust"
+              />
+              {showHits && hits.length > 0 && (
+                <ul className="absolute z-10 mt-1.5 w-full overflow-hidden rounded-2xl border border-line bg-cream shadow-lift">
+                  {hits.map((h) => (
+                    <li key={`${h.lat},${h.lng}`}>
+                      <button
+                        type="button"
+                        onMouseDown={() => {
+                          setDestination(h);
+                          setDestinationQuery(h.place_name);
+                          setShowHits(false);
+                          setHits([]);
+                        }}
+                        className="flex w-full items-start gap-2 px-3 py-2 text-left text-sm hover:bg-sand"
+                      >
+                        <span className="mt-0.5">📍</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-serif font-semibold">{h.name}</div>
+                          <div className="truncate text-[11px] text-muted">
+                            {h.place_name}
+                          </div>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div>
+                <Label>From</Label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full rounded-2xl border border-line bg-cream px-4 py-3 text-sm outline-none focus:border-rust"
+                />
+              </div>
+              <div>
+                <Label>To</Label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full rounded-2xl border border-line bg-cream px-4 py-3 text-sm outline-none focus:border-rust"
+                />
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={busy || !name.trim()}
-              className="mt-3 w-full rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-cream transition active:scale-[0.98] disabled:opacity-40"
+              className="mt-5 w-full rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-cream transition active:scale-[0.98] disabled:opacity-40"
             >
               {busy ? "creating…" : "Create the atlas →"}
             </button>
@@ -104,38 +212,28 @@ export default function LandingClient() {
             <h2 className="mt-2 font-serif text-2xl font-semibold tracking-tight">
               Join an existing one
             </h2>
-            <p className="mt-1 text-sm text-muted">
-              Paste the slug or the full URL.
-            </p>
+            <Label>Slug or full URL</Label>
             <input
               value={joinSlug}
               onChange={(e) => setJoinSlug(e.target.value)}
               placeholder="ab3kpq8m9d"
-              className="mt-5 w-full rounded-2xl border border-line bg-cream px-4 py-3 text-base outline-none focus:border-sage-dark"
+              className="w-full rounded-2xl border border-line bg-cream px-4 py-3 text-base outline-none focus:border-sage-dark"
             />
             <button
               type="submit"
               disabled={!joinSlug.trim()}
-              className="mt-3 w-full rounded-2xl border border-line bg-cream px-4 py-3 text-sm font-semibold text-ink transition active:scale-[0.98] hover:bg-sand disabled:opacity-40"
+              className="mt-5 w-full rounded-2xl border border-line bg-cream px-4 py-3 text-sm font-semibold text-ink transition active:scale-[0.98] hover:bg-sand disabled:opacity-40"
             >
               Open trip →
             </button>
           </form>
         </div>
 
-        <div className="mt-16 grid gap-6 sm:mt-24 sm:grid-cols-3">
-          <Feature emoji="🌍" title="A globe, not a list">
-            Your stops are pins on a real atlas. Mapbox 3D, road routing,
-            zoom into the day you&apos;re planning.
-          </Feature>
-          <Feature emoji="🗳️" title="The crew decides">
-            Everyone pitches options. Everyone votes. Highest-voted suggestion
-            wins the slot — and lands on the map.
-          </Feature>
-          <Feature emoji="🥐" title="By the moment">
-            Break each day into the bits that matter — breakfast, an activity,
-            where to sleep — with a top-N limit per slot.
-          </Feature>
+        <div className="mt-16 grid gap-6 sm:mt-24 sm:grid-cols-4">
+          <Feature emoji="🛏️" title="Hotel" body="Where you sleep." />
+          <Feature emoji="🍽️" title="Food" body="Where you eat." />
+          <Feature emoji="🍸" title="Drink" body="Where you sit." />
+          <Feature emoji="🎒" title="Activity" body="Where you go." />
         </div>
 
         <div className="mt-20 text-[10px] uppercase tracking-[0.28em] text-muted">
@@ -146,20 +244,28 @@ export default function LandingClient() {
   );
 }
 
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mt-4 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      {children}
+    </div>
+  );
+}
+
 function Feature({
   emoji,
   title,
-  children,
+  body,
 }: {
   emoji: string;
   title: string;
-  children: React.ReactNode;
+  body: string;
 }) {
   return (
     <div className="rounded-3xl border border-line bg-cream p-5 shadow-soft">
       <div className="text-3xl">{emoji}</div>
       <h3 className="mt-2 font-serif text-lg font-semibold tracking-tight">{title}</h3>
-      <p className="mt-1 text-sm text-muted">{children}</p>
+      <p className="mt-1 text-sm text-muted">{body}</p>
     </div>
   );
 }

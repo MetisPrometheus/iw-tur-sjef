@@ -33,15 +33,11 @@ export default function StopCarousel({
               )}
             >
               <span
-                className={clsx(
-                  "grid h-6 w-6 place-items-center rounded-full font-serif text-xs font-bold",
-                  active ? "bg-cream text-ink" : "bg-ink text-cream",
-                )}
-                style={
-                  active
-                    ? undefined
-                    : { background: "linear-gradient(135deg,#fcd34d,#c4633c)", color: "#2a2520" }
-                }
+                className="grid h-6 w-6 place-items-center rounded-full font-serif text-xs font-bold"
+                style={{
+                  background: "linear-gradient(135deg,#fcd34d,#c4633c)",
+                  color: "#2a2520",
+                }}
               >
                 {letter}
               </span>

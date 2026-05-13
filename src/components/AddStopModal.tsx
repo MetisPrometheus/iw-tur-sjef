@@ -15,12 +15,18 @@ export default function AddStopModal({
 }) {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
-  const [date, setDate] = useState("");
+  const [picked, setPicked] = useState<Hit | null>(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [busy, setBusy] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (picked && q === picked.place_name) {
+      setHits([]);
+      return;
+    }
     if (!q.trim()) {
       setHits([]);
       return;
@@ -33,18 +39,20 @@ export default function AddStopModal({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [q]);
+  }, [q, picked]);
 
-  async function pick(h: Hit) {
+  async function submit() {
+    if (!picked) return;
     setBusy(true);
     await fetch(`/api/trips/${slug}/stops`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: h.name,
-        lat: h.lat,
-        lng: h.lng,
-        arrival_date: date || null,
+        name: picked.name,
+        lat: picked.lat,
+        lng: picked.lng,
+        start_date: startDate || null,
+        end_date: endDate || null,
       }),
     });
     setBusy(false);
@@ -59,7 +67,7 @@ export default function AddStopModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[80vh] w-full flex-col rounded-t-4xl bg-cream shadow-lift animate-slide-up sm:max-w-lg sm:rounded-4xl"
+        className="flex max-h-[85vh] w-full flex-col rounded-t-4xl bg-cream shadow-lift animate-slide-up sm:max-w-lg sm:rounded-4xl"
         style={{ paddingBottom: "max(1rem, var(--safe-bottom))" }}
       >
         <div className="flex justify-center pt-2 pb-1 sm:hidden">
@@ -81,45 +89,88 @@ export default function AddStopModal({
             ✕
           </button>
         </div>
+
         <div className="px-5 pb-3">
           <input
             autoFocus
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPicked(null);
+            }}
             placeholder="Search a town, region, address…"
             className="w-full rounded-2xl border border-line bg-cream px-4 py-3 outline-none focus:border-rust"
           />
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-line bg-cream px-4 py-2.5 text-sm outline-none focus:border-rust"
-          />
         </div>
-        <div className="flex-1 overflow-y-auto px-5 pb-5">
-          {hits.length === 0 && q.trim() && (
-            <div className="rounded-2xl border border-dashed border-line bg-cream/50 px-4 py-6 text-center text-sm text-muted">
-              keep typing…
+
+        {!picked && hits.length > 0 && (
+          <div className="flex-1 overflow-y-auto px-5 pb-3">
+            <ul className="flex flex-col gap-1.5">
+              {hits.map((h) => (
+                <li key={`${h.lat},${h.lng}`}>
+                  <button
+                    onClick={() => {
+                      setPicked(h);
+                      setQ(h.place_name);
+                    }}
+                    className="flex w-full items-start gap-3 rounded-2xl border border-line bg-cream px-4 py-3 text-left transition active:scale-[0.99] hover:border-ink"
+                  >
+                    <span className="mt-0.5 text-lg">📍</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-serif font-semibold text-ink">{h.name}</div>
+                      <div className="truncate text-[11px] text-muted">
+                        {h.place_name}
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {picked && (
+          <div className="px-5 pb-5">
+            <div className="rounded-2xl border border-line bg-sand/40 px-4 py-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                Stop
+              </div>
+              <div className="font-serif text-lg font-semibold">{picked.name}</div>
+              <div className="text-[11px] text-muted">{picked.place_name}</div>
             </div>
-          )}
-          <ul className="flex flex-col gap-1.5">
-            {hits.map((h) => (
-              <li key={`${h.lat},${h.lng}`}>
-                <button
-                  onClick={() => pick(h)}
-                  disabled={busy}
-                  className="flex w-full items-start gap-3 rounded-2xl border border-line bg-cream px-4 py-3 text-left transition active:scale-[0.99] hover:border-ink disabled:opacity-50"
-                >
-                  <span className="mt-0.5 text-lg">📍</span>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-serif font-semibold text-ink">{h.name}</div>
-                    <div className="truncate text-[11px] text-muted">{h.place_name}</div>
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div>
+                <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                  From
+                </div>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full rounded-2xl border border-line bg-cream px-3 py-2.5 text-sm outline-none focus:border-rust"
+                />
+              </div>
+              <div>
+                <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                  To
+                </div>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full rounded-2xl border border-line bg-cream px-3 py-2.5 text-sm outline-none focus:border-rust"
+                />
+              </div>
+            </div>
+            <button
+              onClick={submit}
+              disabled={busy}
+              className="mt-4 w-full rounded-2xl bg-ink px-4 py-3 text-sm font-semibold text-cream transition active:scale-[0.98] disabled:opacity-40"
+            >
+              {busy ? "adding…" : "Add stop →"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

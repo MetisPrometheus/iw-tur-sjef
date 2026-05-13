@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { TripBundle } from "@/lib/types";
+import type { Category, TripBundle } from "@/lib/types";
 import TripMap from "./TripMap";
 import TitlePlate from "./TitlePlate";
 import TopRail from "./TopRail";
@@ -23,8 +23,9 @@ export default function AtlasShell({
 }) {
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
-  const [activeDate, setActiveDate] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<Category>("hotel");
   const [addingStop, setAddingStop] = useState(false);
+  const [focusSuggestionId, setFocusSuggestionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!clientId || !name || !bundle) return;
@@ -59,12 +60,23 @@ export default function AtlasShell({
     mutate();
   }
 
+  function handlePinClick(suggestionId: string) {
+    const s = bundle.suggestions.find((x) => x.id === suggestionId);
+    if (!s) return;
+    setActiveStopId(s.stop_id);
+    setActiveCategory(s.category);
+    setFocusSuggestionId(s.id);
+    // Auto-clear focus after a moment.
+    setTimeout(() => setFocusSuggestionId(null), 2500);
+  }
+
   return (
     <div className="relative h-[100dvh] w-full overflow-hidden bg-ink">
       <TripMap
         bundle={bundle}
         activeStopId={activeStopId}
         onStopClick={(id) => setActiveStopId(id)}
+        onPinClick={handlePinClick}
       />
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-3 sm:p-4">
@@ -77,17 +89,19 @@ export default function AtlasShell({
         slug={slug}
         meId={participantId}
         activeStopId={activeStopId}
-        activeDate={activeDate}
+        activeCategory={activeCategory}
         onPickStop={setActiveStopId}
-        onPickDate={setActiveDate}
+        onPickCategory={setActiveCategory}
         onAddStop={() => setAddingStop(true)}
         onMutated={mutate}
+        focusSuggestionId={focusSuggestionId}
+        onClearFocus={() => setFocusSuggestionId(null)}
       />
 
       <button
         onClick={() => setAddingStop(true)}
         className="pointer-events-auto fixed right-4 z-20 grid h-14 w-14 place-items-center rounded-full bg-rust text-2xl text-white shadow-lift transition active:scale-[0.94] md:hidden"
-        style={{ bottom: "calc(36dvh + 0.75rem)" }}
+        style={{ bottom: "calc(40dvh + 0.75rem)" }}
         aria-label="Add stop"
       >
         ＋

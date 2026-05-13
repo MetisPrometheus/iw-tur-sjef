@@ -9,8 +9,8 @@ const Body = z.object({
   name: z.string().trim().min(1).max(120),
   lat: z.number().gte(-90).lte(90),
   lng: z.number().gte(-180).lte(180),
-  arrival_date: z.string().nullable().optional(),
-  depart_date: z.string().nullable().optional(),
+  start_date: z.string().nullable().optional(),
+  end_date: z.string().nullable().optional(),
 });
 
 export async function POST(
@@ -32,9 +32,9 @@ export async function POST(
   const order = (max[0].m ?? -1) + 1;
 
   const rows = await sql<Stop[]>`
-    INSERT INTO stop (trip_id, order_index, name, lat, lng, arrival_date, depart_date)
+    INSERT INTO stop (trip_id, order_index, name, lat, lng, start_date, end_date)
     VALUES (${tripId}, ${order}, ${parsed.data.name}, ${parsed.data.lat}, ${parsed.data.lng},
-            ${parsed.data.arrival_date ?? null}, ${parsed.data.depart_date ?? null})
+            ${parsed.data.start_date ?? null}, ${parsed.data.end_date ?? null})
     RETURNING *
   `;
   await sql`UPDATE trip SET updated_at = now() WHERE id = ${tripId}`;

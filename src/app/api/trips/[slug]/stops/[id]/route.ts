@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 
 const Patch = z.object({
   name: z.string().trim().min(1).max(120).optional(),
-  arrival_date: z.string().nullable().optional(),
-  depart_date: z.string().nullable().optional(),
+  start_date: z.string().nullable().optional(),
+  end_date: z.string().nullable().optional(),
   order_index: z.number().int().min(0).optional(),
 });
 
@@ -20,13 +20,12 @@ export async function PATCH(
   const json = await req.json().catch(() => null);
   const parsed = Patch.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "invalid" }, { status: 400 });
-
   const d = parsed.data;
   const rows = await sql<Stop[]>`
     UPDATE stop SET
       name = COALESCE(${d.name ?? null}, name),
-      arrival_date = COALESCE(${d.arrival_date ?? null}, arrival_date),
-      depart_date = COALESCE(${d.depart_date ?? null}, depart_date),
+      start_date = COALESCE(${d.start_date ?? null}, start_date),
+      end_date = COALESCE(${d.end_date ?? null}, end_date),
       order_index = COALESCE(${d.order_index ?? null}, order_index)
     WHERE id = ${id} RETURNING *
   `;

@@ -19,16 +19,13 @@ export async function GET(req: Request) {
   }
 
   try {
-    const includedType = keyword
-      ? undefined
-      : category
-      ? CATEGORY_PLACE_TYPE[category] ?? undefined
-      : undefined;
+    const includedType =
+      !keyword && category ? CATEGORY_PLACE_TYPE[category] : undefined;
     const places = await searchNearby({
       lat,
       lng,
       radius,
-      includedType: includedType ?? undefined,
+      includedType,
       keyword,
     });
     return NextResponse.json({ places });

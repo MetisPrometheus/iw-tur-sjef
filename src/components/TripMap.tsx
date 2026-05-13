@@ -3,74 +3,62 @@
 import { useEffect, useMemo, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import type { TripBundle, Category } from "@/lib/types";
-import { CATEGORY_COLOR } from "@/lib/types";
+import { CATEGORY_COLOR, CATEGORY_EMOJI } from "@/lib/types";
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
-type Winner = {
+type Pinned = {
   id: string;
+  stop_id: string;
   lat: number;
   lng: number;
   name: string;
-  category: Category | null;
+  category: Category;
 };
 
 export default function TripMap({
   bundle,
   activeStopId,
   onStopClick,
+  onPinClick,
 }: {
   bundle: TripBundle;
   activeStopId?: string | null;
   onStopClick?: (stopId: string) => void;
+  onPinClick?: (suggestionId: string) => void;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const routeReqRef = useRef(0);
 
-  const winners: Winner[] = useMemo(() => {
-    const out: Winner[] = [];
-    const dayById = new Map(bundle.days.map((d) => [d.id, d]));
-    const byId = new Map(bundle.suggestions.map((s) => [s.id, s]));
-    const counts: Record<string, number> = {};
-    for (const v of bundle.votes) counts[v.suggestion_id] = (counts[v.suggestion_id] ?? 0) + 1;
-
-    const byDay = new Map<string, string[]>();
-    for (const s of bundle.suggestions) {
-      const arr = byDay.get(s.day_id) ?? [];
-      arr.push(s.id);
-      byDay.set(s.day_id, arr);
-    }
-    for (const [dayId, ids] of byDay) {
-      const day = dayById.get(dayId);
-      if (!day) continue;
-      const sorted = ids.slice().sort((a, b) => (counts[b] ?? 0) - (counts[a] ?? 0));
-      for (let i = 0; i < Math.min(day.capacity, sorted.length); i++) {
-        const s = byId.get(sorted[i])!;
-        if (s.lat == null || s.lng == null) continue;
-        if ((counts[s.id] ?? 0) === 0) continue;
-        out.push({
+  const pins: Pinned[] = useMemo(
+    () =>
+      bundle.suggestions
+        .filter(
+          (s): s is typeof s & { lat: number; lng: number } =>
+            s.is_pinned && s.lat != null && s.lng != null,
+        )
+        .map((s) => ({
           id: s.id,
+          stop_id: s.stop_id,
           lat: s.lat,
           lng: s.lng,
           name: s.name,
-          category: (s.category as Category | null) ?? null,
-        });
-      }
-    }
-    return out;
-  }, [bundle.days, bundle.suggestions, bundle.votes]);
+          category: s.category,
+        })),
+    [bundle.suggestions],
+  );
 
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
     const first = bundle.stops[0];
     const map = new mapboxgl.Map({
       container: ref.current,
-      style: "mapbox://styles/mapbox/outdoors-v12",
+      style: "mapbox://styles/mapbox/satellite-streets-v12",
       projection: { name: "globe" },
       center: first ? [first.lng, first.lat] : [10.75, 59.91],
-      zoom: first ? 4.6 : 1.4,
+      zoom: first ? 5.5 : 1.4,
       attributionControl: false,
     });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-left");
@@ -81,11 +69,11 @@ export default function TripMap({
 
     map.on("style.load", () => {
       map.setFog({
-        color: "rgb(252, 232, 207)",
-        "high-color": "rgb(196, 99, 60)",
-        "horizon-blend": 0.06,
-        "space-color": "rgb(20, 14, 30)",
-        "star-intensity": 0.65,
+        color: "rgb(186, 210, 235)",
+        "high-color": "rgb(36, 92, 223)",
+        "horizon-blend": 0.04,
+        "space-color": "rgb(11, 11, 25)",
+        "star-intensity": 0.55,
       });
     });
 
@@ -100,9 +88,9 @@ export default function TripMap({
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
-          "line-color": "#c4633c",
+          "line-color": "#fcd34d",
           "line-width": 10,
-          "line-opacity": 0.22,
+          "line-opacity": 0.25,
           "line-blur": 6,
         },
       });
@@ -112,9 +100,9 @@ export default function TripMap({
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
-          "line-color": "#2a2520",
-          "line-width": 3,
-          "line-opacity": 0.85,
+          "line-color": "#faf6ef",
+          "line-width": 2.5,
+          "line-opacity": 0.9,
           "line-dasharray": [0.6, 1.4],
         },
       });
@@ -146,20 +134,19 @@ export default function TripMap({
       el.style.padding = "0";
       el.innerHTML = `
         <span style="
-          position: relative;
           display: grid;
           place-items: center;
-          width: ${isActive ? 44 : 36}px;
-          height: ${isActive ? 44 : 36}px;
+          width: ${isActive ? 46 : 38}px;
+          height: ${isActive ? 46 : 38}px;
           border-radius: 999px;
           background: linear-gradient(135deg, #fcd34d 0%, #c4633c 95%);
           color: #2a2520;
           font-weight: 800;
-          font-size: ${isActive ? 16 : 13}px;
+          font-size: ${isActive ? 17 : 14}px;
           box-shadow:
-            0 0 0 3px #faf6ef,
-            0 0 ${isActive ? 32 : 20}px ${isActive ? 8 : 5}px rgba(252,211,77,0.55),
-            0 8px 18px -4px rgba(42,37,32,0.55);
+            0 0 0 3px rgba(250,246,239,0.85),
+            0 0 ${isActive ? 36 : 22}px ${isActive ? 9 : 6}px rgba(252,211,77,0.55),
+            0 8px 18px -4px rgba(0,0,0,0.55);
           font-family: var(--font-fraunces), serif;
         ">${letter}</span>
       `;
@@ -172,7 +159,7 @@ export default function TripMap({
       const m = new mapboxgl.Marker({ element: el, anchor: "center" })
         .setLngLat([stop.lng, stop.lat])
         .setPopup(
-          new mapboxgl.Popup({ offset: 24, closeButton: false }).setHTML(
+          new mapboxgl.Popup({ offset: 26, closeButton: false }).setHTML(
             `<div style="font-family: var(--font-fraunces), serif; font-weight: 600; font-size: 14px;">${escapeHTML(stop.name)}</div>`,
           ),
         )
@@ -180,23 +167,42 @@ export default function TripMap({
       markersRef.current.push(m);
     });
 
-    winners.forEach((w) => {
-      const color = w.category ? CATEGORY_COLOR[w.category] : "#94a3b8";
-      const el = document.createElement("div");
-      Object.assign(el.style, {
-        background: color,
-        width: "16px",
-        height: "16px",
-        borderRadius: "999px",
-        border: "2.5px solid #faf6ef",
-        boxShadow: "0 4px 12px -2px rgba(42,37,32,0.55), 0 0 0 1px rgba(42,37,32,0.18)",
-        cursor: "pointer",
-      } as Partial<CSSStyleDeclaration>);
+    pins.forEach((p) => {
+      const color = CATEGORY_COLOR[p.category];
+      const emoji = CATEGORY_EMOJI[p.category];
+      const el = document.createElement("button");
+      el.type = "button";
+      el.setAttribute("aria-label", p.name);
+      el.style.cursor = "pointer";
+      el.style.background = "transparent";
+      el.style.border = "0";
+      el.style.padding = "0";
+      el.innerHTML = `
+        <span style="
+          display: grid;
+          place-items: center;
+          width: 30px;
+          height: 30px;
+          border-radius: 999px;
+          background: ${color};
+          color: white;
+          font-size: 14px;
+          box-shadow:
+            0 0 0 2.5px rgba(250,246,239,0.9),
+            0 4px 12px -2px rgba(0,0,0,0.55);
+        ">${emoji}</span>
+      `;
+      if (onPinClick) {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          onPinClick(p.id);
+        });
+      }
       const m = new mapboxgl.Marker({ element: el, anchor: "center" })
-        .setLngLat([w.lng, w.lat])
+        .setLngLat([p.lng, p.lat])
         .setPopup(
-          new mapboxgl.Popup({ offset: 14, closeButton: false }).setHTML(
-            `<div style="font-weight: 600; font-size: 13px;">${escapeHTML(w.name)}</div>`,
+          new mapboxgl.Popup({ offset: 18, closeButton: false }).setHTML(
+            `<div style="font-weight: 600; font-size: 13px;">${escapeHTML(p.name)}</div>`,
           ),
         )
         .addTo(map);
@@ -205,18 +211,18 @@ export default function TripMap({
 
     const pts = [
       ...bundle.stops.map((s) => [s.lng, s.lat] as [number, number]),
-      ...winners.map((w) => [w.lng, w.lat] as [number, number]),
+      ...pins.map((p) => [p.lng, p.lat] as [number, number]),
     ];
-    if (pts.length >= 2) {
+    if (pts.length >= 2 && !activeStopId) {
       const bounds = pts.reduce(
         (b, p) => b.extend(p),
         new mapboxgl.LngLatBounds(pts[0], pts[0]),
       );
       map.fitBounds(bounds, { padding: 90, duration: 1400, maxZoom: 9 });
     } else if (pts.length === 1) {
-      map.flyTo({ center: pts[0], zoom: 8, duration: 1200 });
+      map.flyTo({ center: pts[0], zoom: 9, duration: 1200 });
     }
-  }, [bundle.stops, winners, activeStopId, onStopClick]);
+  }, [bundle.stops, pins, activeStopId, onStopClick, onPinClick]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -260,7 +266,12 @@ export default function TripMap({
     if (!map || !activeStopId) return;
     const stop = bundle.stops.find((s) => s.id === activeStopId);
     if (!stop) return;
-    map.flyTo({ center: [stop.lng, stop.lat], zoom: 9, duration: 1400, essential: true });
+    map.flyTo({
+      center: [stop.lng, stop.lat],
+      zoom: 12,
+      duration: 1400,
+      essential: true,
+    });
   }, [activeStopId, bundle.stops]);
 
   return <div ref={ref} className="absolute inset-0" />;
