@@ -87,10 +87,10 @@ export default function TripMap({
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
-          "line-color": "#c4633c",
-          "line-width": 12,
-          "line-opacity": 0.32,
-          "line-blur": 8,
+          "line-color": "#ff3366",
+          "line-width": 16,
+          "line-opacity": 0.45,
+          "line-blur": 10,
         },
       });
       map.addLayer({
@@ -99,10 +99,10 @@ export default function TripMap({
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
-          "line-color": "#c4633c",
-          "line-width": 3.5,
-          "line-opacity": 0.98,
-          "line-dasharray": [0.6, 1.4],
+          "line-color": "#ff073a",
+          "line-width": 4,
+          "line-opacity": 1,
+          "line-dasharray": [0.55, 1.35],
         },
       });
       setMapReady(true);

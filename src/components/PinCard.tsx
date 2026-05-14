@@ -46,7 +46,7 @@ export default function PinCard({
   return (
     <article
       className={clsx(
-        "relative flex w-[240px] shrink-0 flex-col overflow-hidden rounded-3xl border bg-cream shadow-soft transition",
+        "relative flex w-[240px] shrink-0 flex-col overflow-hidden rounded-3xl border bg-cream shadow-soft transition md:w-full md:shrink",
         pinned ? "border-line" : "border-line opacity-55",
       )}
     >

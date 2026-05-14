@@ -119,7 +119,7 @@ export default function TripSheet({
   return (
     <aside
       className={clsx(
-        "pointer-events-auto fixed left-2 right-2 z-30 flex flex-col overflow-hidden rounded-t-4xl bg-cream shadow-sheet transition-all duration-300 sm:left-4 sm:right-4 md:left-auto md:right-4 md:top-24 md:bottom-4 md:w-[440px] md:rounded-4xl md:shadow-lift",
+        "pointer-events-auto fixed left-2 right-2 z-30 flex flex-col overflow-hidden rounded-t-4xl bg-cream shadow-sheet transition-all duration-300 sm:left-4 sm:right-4 md:left-auto md:right-4 md:top-24 md:bottom-4 md:w-[560px] md:rounded-4xl md:shadow-lift lg:w-[680px] xl:w-[760px]",
         "bottom-0",
         sheetState === "expanded" ? "h-[80dvh] md:h-auto" : "h-[42dvh] md:h-auto",
       )}
@@ -212,34 +212,36 @@ export default function TripSheet({
           )}
 
           {activeStop && categorySugs.length > 0 && (
-            <div className="flex gap-3 overflow-x-auto no-scrollbar snap-ribbon px-4 pt-3">
-              {categorySugs.map((s) => (
-                <div
-                  key={s.id}
-                  className={clsx(
-                    "transition",
-                    focusSuggestionId === s.id && "rounded-3xl ring-4 ring-rust/50",
-                  )}
-                  onClick={() => focusSuggestionId === s.id && onClearFocus()}
+            <div className="px-4 pt-3">
+              <div className="flex gap-3 overflow-x-auto no-scrollbar snap-ribbon md:grid md:grid-cols-2 md:gap-3 md:overflow-visible lg:grid-cols-3">
+                {categorySugs.map((s) => (
+                  <div
+                    key={s.id}
+                    className={clsx(
+                      "transition",
+                      focusSuggestionId === s.id && "rounded-3xl ring-4 ring-rust/50",
+                    )}
+                    onClick={() => focusSuggestionId === s.id && onClearFocus()}
+                  >
+                    <PinCard
+                      suggestion={s}
+                      participants={bundle.participants}
+                      meId={meId}
+                      slug={slug}
+                      onMutated={onMutated}
+                    />
+                  </div>
+                ))}
+                <button
+                  onClick={() => onBrowseCategory(activeCategory)}
+                  className="flex w-[160px] shrink-0 flex-col items-center justify-center rounded-3xl border border-dashed border-line bg-cream/40 text-muted transition active:scale-[0.98] hover:border-ink hover:text-ink md:aspect-[4/5] md:w-full md:shrink"
                 >
-                  <PinCard
-                    suggestion={s}
-                    participants={bundle.participants}
-                    meId={meId}
-                    slug={slug}
-                    onMutated={onMutated}
-                  />
-                </div>
-              ))}
-              <button
-                onClick={() => onBrowseCategory(activeCategory)}
-                className="flex w-[160px] shrink-0 flex-col items-center justify-center rounded-3xl border border-dashed border-line bg-cream/40 text-muted transition active:scale-[0.98] hover:border-ink hover:text-ink"
-              >
-                <div className="text-3xl">📍</div>
-                <div className="mt-1 text-xs font-semibold uppercase tracking-wider">
-                  Browse more
-                </div>
-              </button>
+                  <div className="text-3xl">📍</div>
+                  <div className="mt-1 text-xs font-semibold uppercase tracking-wider">
+                    Browse more
+                  </div>
+                </button>
+              </div>
             </div>
           )}
         </div>
