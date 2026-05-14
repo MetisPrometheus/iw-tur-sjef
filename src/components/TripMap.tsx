@@ -87,10 +87,10 @@ export default function TripMap({
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
-          "line-color": "#fcd34d",
-          "line-width": 10,
-          "line-opacity": 0.25,
-          "line-blur": 6,
+          "line-color": "#c4633c",
+          "line-width": 12,
+          "line-opacity": 0.32,
+          "line-blur": 8,
         },
       });
       map.addLayer({
@@ -99,9 +99,9 @@ export default function TripMap({
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
-          "line-color": "#faf6ef",
-          "line-width": 2.5,
-          "line-opacity": 0.9,
+          "line-color": "#c4633c",
+          "line-width": 3.5,
+          "line-opacity": 0.98,
           "line-dasharray": [0.6, 1.4],
         },
       });
@@ -182,32 +182,13 @@ export default function TripMap({
     onSelectPin,
   ]);
 
-  // Fit bounds to all stops + pinned suggestions, but only when activeStop is null.
-  useEffect(() => {
-    if (!mapReady) return;
-    const map = mapRef.current;
-    if (!map) return;
-    const pts = [
-      ...bundle.stops.map((s) => [s.lng, s.lat] as [number, number]),
-      ...pinnedSuggestions.map((p) => [p.lng, p.lat] as [number, number]),
-    ];
-    if (activeStopId) return;
-    if (pts.length >= 2) {
-      const bounds = pts.reduce(
-        (b, p) => b.extend(p),
-        new mapboxgl.LngLatBounds(pts[0], pts[0]),
-      );
-      map.fitBounds(bounds, { padding: 90, duration: 1400, maxZoom: 9 });
-    } else if (pts.length === 1) {
-      map.flyTo({ center: pts[0], zoom: 9, duration: 1200 });
-    }
-  }, [mapReady, bundle.stops, pinnedSuggestions, activeStopId]);
-
-  // Fly to active stop.
+  // Fly to active stop — ONCE per change. Don't re-fly on bundle refresh.
+  const lastFlownStop = useRef<string | null>(null);
   useEffect(() => {
     if (!mapReady) return;
     const map = mapRef.current;
     if (!map || !activeStopId) return;
+    if (lastFlownStop.current === activeStopId) return;
     const stop = bundle.stops.find((s) => s.id === activeStopId);
     if (!stop) return;
     map.flyTo({
@@ -216,6 +197,7 @@ export default function TripMap({
       duration: 1400,
       essential: true,
     });
+    lastFlownStop.current = activeStopId;
   }, [mapReady, activeStopId, bundle.stops]);
 
   // Driving route between stops.

@@ -8,7 +8,7 @@ import TopRail from "./TopRail";
 import TripSheet, { type SheetState } from "./TripSheet";
 import AddStopModal from "./AddStopModal";
 import BrowseBar from "./BrowseBar";
-import SheetChip from "./SheetChip";
+import PlannerButton from "./PlannerButton";
 import type {
   GhostPlace,
   PopupAction,
@@ -71,7 +71,6 @@ export default function AtlasShell({
     setActiveStopId(bundle.stops[0]?.id ?? null);
   }, [bundle.stops, activeStopId]);
 
-  // Filter ghost places that are already saved (any place_id match).
   const ghostsVisible = useMemo(() => {
     if (!browse) return [];
     const taken = new Set(
@@ -207,7 +206,6 @@ export default function AtlasShell({
   function browseCategoryFromSheet(category: Category) {
     const stop = bundle.stops.find((s) => s.id === activeStopId);
     if (!stop) return;
-    // If a hotel is already pinned at this stop, anchor on its first pinned hotel.
     const hotel = bundle.suggestions.find(
       (s) =>
         s.stop_id === stop.id &&
@@ -223,10 +221,8 @@ export default function AtlasShell({
     }
   }
 
-  const activeStop = bundle.stops.find((s) => s.id === activeStopId) ?? null;
-  const pinnedCountForStop = activeStop
-    ? bundle.suggestions.filter((s) => s.stop_id === activeStop.id && s.is_pinned).length
-    : 0;
+  const pinnedCount = bundle.suggestions.filter((s) => s.is_pinned).length;
+  const sheetOpen = sheetState !== "hidden";
 
   return (
     <div className="relative h-[100dvh] w-full overflow-hidden bg-ink">
@@ -244,6 +240,15 @@ export default function AtlasShell({
         <TitlePlate trip={bundle.trip} slug={slug} onRename={renameTrip} />
         <TopRail participants={bundle.participants} meId={participantId} />
       </div>
+
+      <PlannerButton
+        open={sheetOpen}
+        pinnedCount={pinnedCount}
+        stopCount={bundle.stops.length}
+        onToggle={() =>
+          setSheetState(sheetState === "hidden" ? "peek" : "hidden")
+        }
+      />
 
       {browse && (
         <BrowseBar
@@ -271,30 +276,6 @@ export default function AtlasShell({
         focusSuggestionId={focusSuggestionId}
         onClearFocus={() => setFocusSuggestionId(null)}
       />
-
-      {sheetState === "hidden" && !browse && (
-        <SheetChip
-          stop={activeStop}
-          pinnedCount={pinnedCountForStop}
-          onTap={() => setSheetState("peek")}
-        />
-      )}
-
-      <button
-        onClick={() => setAddingStop(true)}
-        className="pointer-events-auto fixed right-4 z-20 grid h-12 w-12 place-items-center rounded-full bg-rust text-xl text-white shadow-lift transition active:scale-[0.94] md:hidden"
-        style={{
-          bottom:
-            sheetState === "hidden"
-              ? "calc(4.5rem + var(--safe-bottom, 0px))"
-              : sheetState === "expanded"
-              ? "calc(80dvh + 0.75rem)"
-              : "calc(42dvh + 0.75rem)",
-        }}
-        aria-label="Add stop"
-      >
-        ＋
-      </button>
 
       {addingStop && (
         <AddStopModal

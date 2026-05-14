@@ -7,6 +7,7 @@ import { CATEGORY_EMOJI, CATEGORY_LABEL } from "@/lib/types";
 import StopCarousel from "./StopCarousel";
 import CategoryTabs from "./CategoryTabs";
 import PinCard from "./PinCard";
+import TripOverview from "./TripOverview";
 
 export type SheetState = "hidden" | "peek" | "expanded";
 
@@ -41,6 +42,7 @@ export default function TripSheet({
   focusSuggestionId: string | null;
   onClearFocus: () => void;
 }) {
+  const [view, setView] = useState<"stop" | "trip">("stop");
   const [dragY, setDragY] = useState(0);
   const dragStart = useRef<number | null>(null);
   const dragMoved = useRef(false);
@@ -84,7 +86,6 @@ export default function TripSheet({
     if (dragStart.current == null) return;
     const dy = clientY - dragStart.current;
     if (Math.abs(dy) > 3) dragMoved.current = true;
-    // Cap negative drag if already expanded.
     setDragY(Math.max(dy, stateAtDragStart.current === "expanded" ? -40 : -200));
   }
   function endDrag() {
@@ -99,7 +100,6 @@ export default function TripSheet({
         else if (dy > 80) onSheetStateChange("hidden");
       }
     } else {
-      // Tap handle: cycle peek ↔ expanded.
       if (sheetState === "peek") onSheetStateChange("expanded");
       else if (sheetState === "expanded") onSheetStateChange("peek");
     }
@@ -141,8 +141,39 @@ export default function TripSheet({
         <span className="h-1 w-12 rounded-full bg-line" />
       </div>
 
+      {/* View toggle: This stop ↔ Whole trip */}
+      {bundle.stops.length > 0 && (
+        <div className="flex shrink-0 gap-1 px-4 pb-2 pt-1 md:pt-3">
+          <ViewPill
+            active={view === "stop"}
+            onClick={() => setView("stop")}
+          >
+            📍 This stop
+          </ViewPill>
+          <ViewPill
+            active={view === "trip"}
+            onClick={() => setView("trip")}
+          >
+            🗺️ Whole trip
+          </ViewPill>
+        </div>
+      )}
+
       {bundle.stops.length === 0 ? (
         <EmptyState onAddStop={onAddStop} />
+      ) : view === "trip" ? (
+        <div className="flex flex-1 flex-col overflow-y-auto">
+          <TripOverview
+            bundle={bundle}
+            activeStopId={activeStopId}
+            onPickStop={(id) => {
+              onPickStop(id);
+              setView("stop");
+            }}
+            onDeleteStop={deleteStop}
+            onAddStop={onAddStop}
+          />
+        </div>
       ) : (
         <div className="flex flex-1 flex-col overflow-y-auto pb-3">
           <StopCarousel
@@ -217,6 +248,30 @@ export default function TripSheet({
   );
 }
 
+function ViewPill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={clsx(
+        "rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-[0.97]",
+        active
+          ? "bg-ink text-cream shadow-soft"
+          : "bg-sand text-muted hover:bg-line hover:text-ink",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 function EmptyState({ onAddStop }: { onAddStop: () => void }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 pb-8 pt-2 text-center">
@@ -241,7 +296,7 @@ function EmptyState({ onAddStop }: { onAddStop: () => void }) {
 function StopHeader({ stop }: { stop: Stop }) {
   const range = stopDateRange(stop);
   return (
-    <div className="mt-3 px-4">
+    <div className="mt-2 px-4">
       <h2 className="font-serif text-2xl font-semibold leading-tight tracking-tight">
         {stop.name}
       </h2>
