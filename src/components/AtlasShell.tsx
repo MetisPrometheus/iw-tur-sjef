@@ -21,6 +21,7 @@ type BrowseState = {
   anchorName: string;
   anchorLat: number;
   anchorLng: number;
+  keyword: string | null;
   loading: boolean;
   places: GhostPlace[];
 };
@@ -90,38 +91,45 @@ export default function AtlasShell({
     mutate();
   }
 
-  async function enterBrowse(
+  async function fetchBrowse(
     stopId: string,
     category: Category,
-    anchorLat: number,
-    anchorLng: number,
+    lat: number,
+    lng: number,
     anchorName: string,
+    keyword: string | null,
   ) {
-    setSelectedPin(null);
-    setSheetState("hidden");
     setBrowse({
       stopId,
       category,
       anchorName,
-      anchorLat,
-      anchorLng,
+      anchorLat: lat,
+      anchorLng: lng,
+      keyword,
       loading: true,
       places: [],
     });
     try {
       const u = new URL("/api/places/nearby", window.location.origin);
-      u.searchParams.set("lat", String(anchorLat));
-      u.searchParams.set("lng", String(anchorLng));
+      u.searchParams.set("lat", String(lat));
+      u.searchParams.set("lng", String(lng));
       u.searchParams.set("category", category);
+      if (keyword) u.searchParams.set("q", keyword);
       const r = await fetch(u.toString());
       const data = (await r.json()) as { places: Omit<GhostPlace, "category">[] };
-      const withCat: GhostPlace[] = (data.places ?? []).map((p) => ({
-        ...p,
-        category,
-      }));
+      // Rank by rating desc (places with no rating go last). Cap to 10.
+      const ranked = (data.places ?? [])
+        .slice()
+        .sort((a, b) => {
+          const ra = a.rating == null ? -1 : Number(a.rating);
+          const rb = b.rating == null ? -1 : Number(b.rating);
+          return rb - ra;
+        })
+        .slice(0, 10)
+        .map((p) => ({ ...p, category }));
       setBrowse((prev) =>
         prev && prev.stopId === stopId && prev.category === category
-          ? { ...prev, places: withCat, loading: false }
+          ? { ...prev, places: ranked, loading: false }
           : prev,
       );
     } catch {
@@ -129,8 +137,55 @@ export default function AtlasShell({
     }
   }
 
+  function enterBrowse(
+    stopId: string,
+    category: Category,
+    anchorLat: number,
+    anchorLng: number,
+    anchorName: string,
+  ) {
+    setSelectedPin(null);
+    void fetchBrowse(stopId, category, anchorLat, anchorLng, anchorName, null);
+  }
+
+  function searchInBrowse(q: string | null) {
+    if (!browse) return;
+    void fetchBrowse(
+      browse.stopId,
+      browse.category,
+      browse.anchorLat,
+      browse.anchorLng,
+      browse.anchorName,
+      q,
+    );
+  }
+
   function exitBrowse() {
     setBrowse(null);
+  }
+
+  async function addGhostPlace(place: GhostPlace) {
+    if (!participantId || !browse) return;
+    await fetch(`/api/trips/${slug}/suggestions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        stop_id: browse.stopId,
+        added_by: participantId,
+        category: browse.category,
+        is_pinned: true,
+        place_id: place.place_id,
+        name: place.name,
+        address: place.address,
+        lat: place.lat,
+        lng: place.lng,
+        rating: place.rating,
+        photo_ref: place.photo_ref,
+        url: place.url,
+      }),
+    });
+    setSelectedPin(null);
+    mutate();
   }
 
   async function handleAction(action: PopupAction) {
@@ -139,13 +194,13 @@ export default function AtlasShell({
       if (!stop) return;
       setActiveStopId(stop.id);
       setActiveCategory(action.category);
-      void enterBrowse(stop.id, action.category, stop.lat, stop.lng, stop.name);
+      enterBrowse(stop.id, action.category, stop.lat, stop.lng, stop.name);
     } else if (action.type === "browseFromHotel") {
       const hotel = bundle.suggestions.find((s) => s.id === action.hotelId);
       if (!hotel || hotel.lat == null || hotel.lng == null) return;
       setActiveStopId(hotel.stop_id);
       setActiveCategory(action.category);
-      void enterBrowse(
+      enterBrowse(
         hotel.stop_id,
         action.category,
         hotel.lat,
@@ -163,28 +218,7 @@ export default function AtlasShell({
       setSelectedPin(null);
       mutate();
     } else if (action.type === "addGhost") {
-      if (!participantId || !browse) return;
-      const p = action.place;
-      await fetch(`/api/trips/${slug}/suggestions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stop_id: browse.stopId,
-          added_by: participantId,
-          category: browse.category,
-          is_pinned: true,
-          place_id: p.place_id,
-          name: p.name,
-          address: p.address,
-          lat: p.lat,
-          lng: p.lng,
-          rating: p.rating,
-          photo_ref: p.photo_ref,
-          url: p.url,
-        }),
-      });
-      setSelectedPin(null);
-      mutate();
+      await addGhostPlace(action.place);
     }
   }
 
@@ -215,9 +249,9 @@ export default function AtlasShell({
         s.lng != null,
     );
     if (category !== "hotel" && hotel && hotel.lat && hotel.lng) {
-      void enterBrowse(stop.id, category, hotel.lat, hotel.lng, hotel.name);
+      enterBrowse(stop.id, category, hotel.lat, hotel.lng, hotel.name);
     } else {
-      void enterBrowse(stop.id, category, stop.lat, stop.lng, stop.name);
+      enterBrowse(stop.id, category, stop.lat, stop.lng, stop.name);
     }
   }
 
@@ -256,6 +290,8 @@ export default function AtlasShell({
           anchorName={browse.anchorName}
           loading={browse.loading}
           count={ghostsVisible.length}
+          keyword={browse.keyword}
+          onSearch={searchInBrowse}
           onExit={exitBrowse}
         />
       )}
@@ -275,6 +311,20 @@ export default function AtlasShell({
         onMutated={mutate}
         focusSuggestionId={focusSuggestionId}
         onClearFocus={() => setFocusSuggestionId(null)}
+        browse={
+          browse
+            ? {
+                category: browse.category,
+                anchorName: browse.anchorName,
+                loading: browse.loading,
+                places: ghostsVisible,
+              }
+            : null
+        }
+        onBrowseAdd={addGhostPlace}
+        onBrowseFocusOnMap={(placeId) =>
+          setSelectedPin({ kind: "ghost", placeId })
+        }
       />
 
       {addingStop && (

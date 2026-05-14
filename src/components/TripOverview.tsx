@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import type { Stop, TripBundle, Category, Trip } from "@/lib/types";
 import { CATEGORIES, CATEGORY_COLOR, CATEGORY_EMOJI } from "@/lib/types";
+import { balances, settle } from "@/lib/settle";
 
 export default function TripOverview({
   bundle,
@@ -41,8 +42,113 @@ export default function TripOverview({
       >
         + Add another stop
       </button>
+
+      <Settlements bundle={bundle} />
     </div>
   );
+}
+
+function Settlements({ bundle }: { bundle: TripBundle }) {
+  if (bundle.expenses.length === 0) return null;
+  const bs = balances(bundle.participants, bundle.expenses, bundle.splits);
+  const transfers = settle(bs);
+  const currency = bundle.expenses[0]?.currency ?? "NOK";
+  const total = bundle.expenses.reduce((a, e) => a + Number(e.amount), 0);
+
+  return (
+    <div className="mt-2 rounded-3xl border border-line bg-cream/60 p-3.5">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+        💸 Money
+      </div>
+      <div className="mt-1 font-serif text-lg font-semibold tracking-tight">
+        Total spent · {Math.round(total)} {currency}
+      </div>
+
+      <div className="mt-3 flex flex-col gap-1">
+        {bs.map((b) => {
+          const p = bundle.participants.find((pp) => pp.id === b.participant_id);
+          if (!p) return null;
+          return (
+            <div
+              key={b.participant_id}
+              className="flex items-center justify-between rounded-xl bg-cream px-3 py-1.5 text-sm"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-block h-2.5 w-2.5 rounded-full"
+                  style={{ background: p.color }}
+                />
+                <span className="font-semibold">{p.display_name}</span>
+              </div>
+              <div className="flex items-center gap-3 text-[11px]">
+                <span className="text-muted">
+                  paid <span className="font-semibold text-ink">{round(b.paid)}</span>
+                </span>
+                <span
+                  className={clsx(
+                    "font-semibold",
+                    b.net > 0.005
+                      ? "text-emerald-600"
+                      : b.net < -0.005
+                      ? "text-rust"
+                      : "text-muted",
+                  )}
+                >
+                  {b.net > 0.005
+                    ? `+${round(b.net)}`
+                    : b.net < -0.005
+                    ? `${round(b.net)}`
+                    : "settled"}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {transfers.length > 0 && (
+        <div className="mt-3">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+            To settle
+          </div>
+          <ul className="mt-1 flex flex-col gap-1">
+            {transfers.map((t, i) => {
+              const from = bundle.participants.find((p) => p.id === t.from);
+              const to = bundle.participants.find((p) => p.id === t.to);
+              if (!from || !to) return null;
+              return (
+                <li
+                  key={i}
+                  className="flex items-center justify-between rounded-xl bg-cream px-3 py-1.5 text-sm"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full"
+                      style={{ background: from.color }}
+                    />
+                    <span className="font-semibold">{from.display_name}</span>
+                    <span className="text-muted">owes</span>
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full"
+                      style={{ background: to.color }}
+                    />
+                    <span className="font-semibold">{to.display_name}</span>
+                  </span>
+                  <span className="font-serif font-bold">
+                    {round(t.amount)} {currency}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function round(n: number): string {
+  return (Math.round(n * 100) / 100).toFixed(2);
 }
 
 function TripSummary({
@@ -56,6 +162,7 @@ function TripSummary({
 }) {
   const span = tripSpan(trip);
   const totalPinned = suggestions.filter((s) => s.is_pinned).length;
+  const totalDone = suggestions.filter((s) => s.is_done).length;
   const byCat: Partial<Record<Category, number>> = {};
   for (const s of suggestions) {
     if (s.is_pinned) byCat[s.category] = (byCat[s.category] ?? 0) + 1;
@@ -69,7 +176,7 @@ function TripSummary({
         {trip.name}
       </h2>
       {span && <div className="mt-0.5 text-[11px] text-muted">{span}</div>}
-      <div className="mt-2 flex items-center gap-3 text-[11px] text-ink">
+      <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-ink">
         <span>
           <span className="font-bold">{stops.length}</span>
           <span className="ml-0.5 text-muted">
@@ -80,6 +187,11 @@ function TripSummary({
           <span className="font-bold">{totalPinned}</span>
           <span className="ml-0.5 text-muted"> pinned</span>
         </span>
+        {totalDone > 0 && (
+          <span className="font-semibold text-emerald-600">
+            ✓ {totalDone} done
+          </span>
+        )}
         {CATEGORIES.map((c) =>
           byCat[c] ? (
             <span key={c} className="flex items-center gap-0.5 text-muted">

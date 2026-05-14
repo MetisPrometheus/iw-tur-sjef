@@ -67,6 +67,7 @@ export type Suggestion = {
   added_by: string;
   category: Category;
   is_pinned: boolean;
+  is_done: boolean;
   place_id: string | null;
   name: string;
   address: string | null;
@@ -79,9 +80,31 @@ export type Suggestion = {
   created_at: string;
 };
 
+export type SplitKind = "equal" | "amounts";
+
+export type Expense = {
+  id: string;
+  suggestion_id: string;
+  amount: number;
+  currency: string;
+  paid_by: string;
+  split_kind: SplitKind;
+  note: string | null;
+  created_at: string;
+};
+
+export type ExpenseSplit = {
+  id: string;
+  expense_id: string;
+  participant_id: string;
+  amount: number;
+};
+
 export type TripBundle = {
   trip: Trip;
   participants: Participant[];
   stops: Stop[];
   suggestions: Suggestion[];
+  expenses: Expense[];
+  splits: ExpenseSplit[];
 };

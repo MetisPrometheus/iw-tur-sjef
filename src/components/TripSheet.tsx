@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import type { Category, Stop, TripBundle } from "@/lib/types";
 import { CATEGORY_EMOJI, CATEGORY_LABEL } from "@/lib/types";
@@ -8,6 +8,8 @@ import StopCarousel from "./StopCarousel";
 import CategoryTabs from "./CategoryTabs";
 import PinCard from "./PinCard";
 import TripOverview from "./TripOverview";
+import BrowsePanel from "./BrowsePanel";
+import type { GhostPlace } from "./MapPopupContent";
 
 export type SheetState = "hidden" | "peek" | "expanded";
 
@@ -26,6 +28,9 @@ export default function TripSheet({
   onMutated,
   focusSuggestionId,
   onClearFocus,
+  browse,
+  onBrowseAdd,
+  onBrowseFocusOnMap,
 }: {
   bundle: TripBundle;
   slug: string;
@@ -41,12 +46,26 @@ export default function TripSheet({
   onMutated: () => void;
   focusSuggestionId: string | null;
   onClearFocus: () => void;
+  browse: {
+    category: Category;
+    anchorName: string;
+    loading: boolean;
+    places: GhostPlace[];
+  } | null;
+  onBrowseAdd: (p: GhostPlace) => void;
+  onBrowseFocusOnMap: (placeId: string) => void;
 }) {
   const [view, setView] = useState<"stop" | "trip">("stop");
   const [dragY, setDragY] = useState(0);
   const dragStart = useRef<number | null>(null);
   const dragMoved = useRef(false);
   const stateAtDragStart = useRef<SheetState>("peek");
+
+  // When browse starts, expand sheet so the panel is visible.
+  useEffect(() => {
+    if (browse && sheetState === "hidden") onSheetStateChange("peek");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [browse]);
 
   const activeStop = useMemo(
     () => bundle.stops.find((s) => s.id === activeStopId) ?? null,
@@ -141,110 +160,123 @@ export default function TripSheet({
         <span className="h-1 w-12 rounded-full bg-line" />
       </div>
 
-      {/* View toggle: This stop ↔ Whole trip */}
-      {bundle.stops.length > 0 && (
-        <div className="flex shrink-0 gap-1 px-4 pb-2 pt-1 md:pt-3">
-          <ViewPill
-            active={view === "stop"}
-            onClick={() => setView("stop")}
-          >
-            📍 This stop
-          </ViewPill>
-          <ViewPill
-            active={view === "trip"}
-            onClick={() => setView("trip")}
-          >
-            🗺️ Whole trip
-          </ViewPill>
+      {browse ? (
+        <div className="flex flex-1 flex-col overflow-y-auto pt-2 md:pt-3">
+          <BrowsePanel
+            category={browse.category}
+            anchorName={browse.anchorName}
+            loading={browse.loading}
+            places={browse.places}
+            onAdd={onBrowseAdd}
+            onFocusOnMap={onBrowseFocusOnMap}
+          />
         </div>
-      )}
-
-      {bundle.stops.length === 0 ? (
+      ) : bundle.stops.length === 0 ? (
         <EmptyState onAddStop={onAddStop} />
-      ) : view === "trip" ? (
-        <div className="flex flex-1 flex-col overflow-y-auto">
-          <TripOverview
-            bundle={bundle}
-            activeStopId={activeStopId}
-            onPickStop={(id) => {
-              onPickStop(id);
-              setView("stop");
-            }}
-            onDeleteStop={deleteStop}
-            onAddStop={onAddStop}
-          />
-        </div>
       ) : (
-        <div className="flex flex-1 flex-col overflow-y-auto pb-3">
-          <StopCarousel
-            stops={bundle.stops}
-            activeStopId={activeStopId}
-            onPick={onPickStop}
-            onAdd={onAddStop}
-            onDelete={deleteStop}
-          />
+        <>
+          <div className="flex shrink-0 gap-1 px-4 pb-2 pt-1 md:pt-3">
+            <ViewPill active={view === "stop"} onClick={() => setView("stop")}>
+              📍 This stop
+            </ViewPill>
+            <ViewPill active={view === "trip"} onClick={() => setView("trip")}>
+              🗺️ Whole trip
+            </ViewPill>
+          </div>
 
-          {activeStop && <StopHeader stop={activeStop} />}
-
-          {activeStop && (
-            <div className="mt-2">
-              <CategoryTabs
-                value={activeCategory}
-                onChange={onPickCategory}
-                counts={counts}
+          {view === "trip" ? (
+            <div className="flex flex-1 flex-col overflow-y-auto">
+              <TripOverview
+                bundle={bundle}
+                activeStopId={activeStopId}
+                onPickStop={(id) => {
+                  onPickStop(id);
+                  setView("stop");
+                }}
+                onDeleteStop={deleteStop}
+                onAddStop={onAddStop}
               />
             </div>
-          )}
+          ) : (
+            <div className="flex flex-1 flex-col overflow-y-auto pb-3">
+              <StopCarousel
+                stops={bundle.stops}
+                activeStopId={activeStopId}
+                onPick={onPickStop}
+                onAdd={onAddStop}
+                onDelete={deleteStop}
+              />
 
-          {activeStop && categorySugs.length === 0 && (
-            <div className="mx-4 mt-3 grid place-items-center rounded-3xl border border-dashed border-line bg-cream/50 px-4 py-8 text-center">
-              <div className="text-3xl">{CATEGORY_EMOJI[activeCategory]}</div>
-              <p className="mt-2 text-sm text-muted">
-                No {CATEGORY_LABEL[activeCategory].toLowerCase()} here yet.
-              </p>
-              <button
-                onClick={() => onBrowseCategory(activeCategory)}
-                className="mt-3 rounded-full bg-ink px-4 py-2 text-xs font-semibold text-cream transition active:scale-[0.97]"
-              >
-                📍 Browse nearby
-              </button>
-            </div>
-          )}
+              {activeStop && <StopHeader stop={activeStop} />}
 
-          {activeStop && categorySugs.length > 0 && (
-            <div className="px-4 pt-3">
-              <div className="flex gap-3 overflow-x-auto no-scrollbar snap-ribbon md:grid md:grid-cols-2 md:gap-3 md:overflow-visible lg:grid-cols-3">
-                {categorySugs.map((s) => (
-                  <div
-                    key={s.id}
-                    className={clsx(
-                      "transition",
-                      focusSuggestionId === s.id && "rounded-3xl ring-4 ring-rust/50",
-                    )}
-                    onClick={() => focusSuggestionId === s.id && onClearFocus()}
+              {activeStop && (
+                <div className="mt-2">
+                  <CategoryTabs
+                    value={activeCategory}
+                    onChange={onPickCategory}
+                    counts={counts}
+                  />
+                </div>
+              )}
+
+              {activeStop && categorySugs.length === 0 && (
+                <div className="mx-4 mt-3 grid place-items-center rounded-3xl border border-dashed border-line bg-cream/50 px-4 py-8 text-center">
+                  <div className="text-3xl">{CATEGORY_EMOJI[activeCategory]}</div>
+                  <p className="mt-2 text-sm text-muted">
+                    No {CATEGORY_LABEL[activeCategory].toLowerCase()} here yet.
+                  </p>
+                  <button
+                    onClick={() => onBrowseCategory(activeCategory)}
+                    className="mt-3 rounded-full bg-ink px-4 py-2 text-xs font-semibold text-cream transition active:scale-[0.97]"
                   >
-                    <PinCard
-                      suggestion={s}
-                      participants={bundle.participants}
-                      meId={meId}
-                      slug={slug}
-                      onMutated={onMutated}
-                    />
+                    📍 Browse nearby
+                  </button>
+                </div>
+              )}
+
+              {activeStop && categorySugs.length > 0 && (
+                <div className="px-4 pt-3">
+                  <div className="flex gap-3 overflow-x-auto no-scrollbar snap-ribbon md:grid md:grid-cols-2 md:gap-3 md:overflow-visible lg:grid-cols-3">
+                    {categorySugs.map((s) => {
+                      const sugExpenses = bundle.expenses.filter(
+                        (e) => e.suggestion_id === s.id,
+                      );
+                      return (
+                        <div
+                          key={s.id}
+                          className={clsx(
+                            "transition",
+                            focusSuggestionId === s.id &&
+                              "rounded-3xl ring-4 ring-rust/50",
+                          )}
+                          onClick={() => focusSuggestionId === s.id && onClearFocus()}
+                        >
+                          <PinCard
+                            suggestion={s}
+                            participants={bundle.participants}
+                            expenses={sugExpenses}
+                            meId={meId}
+                            slug={slug}
+                            onMutated={onMutated}
+                          />
+                        </div>
+                      );
+                    })}
+                    <button
+                      onClick={() => onBrowseCategory(activeCategory)}
+                      className="flex w-[160px] shrink-0 flex-col items-center justify-center rounded-3xl border border-dashed border-line bg-cream/40 text-muted transition active:scale-[0.98] hover:border-ink hover:text-ink md:aspect-[4/5] md:w-full md:shrink"
+                    >
+                      <div className="text-3xl">📍</div>
+                      <div className="mt-1 text-xs font-semibold uppercase tracking-wider">
+                        Browse more
+                      </div>
+                    </button>
                   </div>
-                ))}
-                <button
-                  onClick={() => onBrowseCategory(activeCategory)}
-                  className="flex w-[160px] shrink-0 flex-col items-center justify-center rounded-3xl border border-dashed border-line bg-cream/40 text-muted transition active:scale-[0.98] hover:border-ink hover:text-ink md:aspect-[4/5] md:w-full md:shrink"
-                >
-                  <div className="text-3xl">📍</div>
-                  <div className="mt-1 text-xs font-semibold uppercase tracking-wider">
-                    Browse more
-                  </div>
-                </button>
-              </div>
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
     </aside>
   );

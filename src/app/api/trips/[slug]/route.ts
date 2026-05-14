@@ -6,6 +6,8 @@ import type {
   Participant,
   Stop,
   Suggestion,
+  Expense,
+  ExpenseSplit,
   TripBundle,
 } from "@/lib/types";
 
@@ -22,7 +24,7 @@ export async function GET(
   }
   const trip = trips[0];
 
-  const [participants, stops, suggestions] = await Promise.all([
+  const [participants, stops, suggestions, expenses, splits] = await Promise.all([
     sql<Participant[]>`SELECT * FROM participant WHERE trip_id = ${trip.id} ORDER BY created_at`,
     sql<Stop[]>`SELECT * FROM stop WHERE trip_id = ${trip.id} ORDER BY order_index`,
     sql<Suggestion[]>`
@@ -31,9 +33,30 @@ export async function GET(
       WHERE st.trip_id = ${trip.id}
       ORDER BY sg.created_at
     `,
+    sql<Expense[]>`
+      SELECT e.* FROM expense e
+      JOIN suggestion sg ON sg.id = e.suggestion_id
+      JOIN stop st ON st.id = sg.stop_id
+      WHERE st.trip_id = ${trip.id}
+      ORDER BY e.created_at
+    `,
+    sql<ExpenseSplit[]>`
+      SELECT es.* FROM expense_split es
+      JOIN expense e ON e.id = es.expense_id
+      JOIN suggestion sg ON sg.id = e.suggestion_id
+      JOIN stop st ON st.id = sg.stop_id
+      WHERE st.trip_id = ${trip.id}
+    `,
   ]);
 
-  const bundle: TripBundle = { trip, participants, stops, suggestions };
+  const bundle: TripBundle = {
+    trip,
+    participants,
+    stops,
+    suggestions,
+    expenses,
+    splits,
+  };
   return NextResponse.json(bundle);
 }
 

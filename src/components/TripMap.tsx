@@ -149,8 +149,8 @@ export default function TripMap({
     pinnedSuggestions.forEach((s) => {
       const el =
         s.category === "hotel"
-          ? hotelMarkerElement()
-          : savedMarkerElement(s.category);
+          ? hotelMarkerElement(s.is_done)
+          : savedMarkerElement(s.category, s.is_done);
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         onSelectPin({ kind: "saved", suggestionId: s.id });
@@ -161,9 +161,9 @@ export default function TripMap({
       markersRef.current.push(m);
     });
 
-    // Ghost (browse-mode) pins
-    ghosts.forEach((g) => {
-      const el = ghostMarkerElement(g.category);
+    // Ghost (browse-mode) pins — numbered by rank.
+    ghosts.forEach((g, i) => {
+      const el = ghostMarkerElement(g.category, i + 1);
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         onSelectPin({ kind: "ghost", placeId: g.place_id });
@@ -334,13 +334,32 @@ function stopMarkerElement(letter: string, isActive: boolean): HTMLElement {
   return el;
 }
 
-function hotelMarkerElement(): HTMLElement {
+function doneBadge(): string {
+  return `<span style="
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: #10b981;
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    border: 2px solid #faf6ef;
+  ">✓</span>`;
+}
+
+function hotelMarkerElement(isDone: boolean): HTMLElement {
   const el = document.createElement("button");
   el.type = "button";
   el.style.cursor = "pointer";
   el.style.background = "transparent";
   el.style.border = "0";
   el.style.padding = "0";
+  el.style.position = "relative";
   el.setAttribute("aria-label", "Hotel");
   el.innerHTML = `
     <span style="
@@ -357,17 +376,19 @@ function hotelMarkerElement(): HTMLElement {
         0 0 0 5px rgba(250,246,239,0.85),
         0 8px 18px -4px rgba(0,0,0,0.6);
     ">🛏️</span>
+    ${isDone ? doneBadge() : ""}
   `;
   return el;
 }
 
-function savedMarkerElement(category: Category): HTMLElement {
+function savedMarkerElement(category: Category, isDone: boolean): HTMLElement {
   const el = document.createElement("button");
   el.type = "button";
   el.style.cursor = "pointer";
   el.style.background = "transparent";
   el.style.border = "0";
   el.style.padding = "0";
+  el.style.position = "relative";
   el.setAttribute("aria-label", category);
   el.innerHTML = `
     <span style="
@@ -383,33 +404,35 @@ function savedMarkerElement(category: Category): HTMLElement {
         0 0 0 2.5px rgba(250,246,239,0.9),
         0 4px 12px -2px rgba(0,0,0,0.55);
     ">${CATEGORY_EMOJI[category]}</span>
+    ${isDone ? doneBadge() : ""}
   `;
   return el;
 }
 
-function ghostMarkerElement(category: Category): HTMLElement {
+function ghostMarkerElement(category: Category, rank: number): HTMLElement {
   const el = document.createElement("button");
   el.type = "button";
   el.style.cursor = "pointer";
   el.style.background = "transparent";
   el.style.border = "0";
   el.style.padding = "0";
-  el.setAttribute("aria-label", "Browse result");
+  el.setAttribute("aria-label", `Browse result #${rank}`);
   const color = CATEGORY_COLOR[category];
   el.innerHTML = `
     <span style="
       display: grid;
       place-items: center;
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       border-radius: 999px;
-      background: rgba(250,246,239,0.96);
-      color: ${color};
+      background: ${color};
+      color: white;
       font-size: 12px;
-      border: 2px solid ${color};
-      box-shadow: 0 4px 10px -2px rgba(0,0,0,0.45);
-      opacity: 0.92;
-    ">${CATEGORY_EMOJI[category]}</span>
+      font-weight: 800;
+      font-family: var(--font-fraunces), serif;
+      border: 2.5px solid rgba(250,246,239,0.92);
+      box-shadow: 0 4px 10px -2px rgba(0,0,0,0.5);
+    ">${rank}</span>
   `;
   return el;
 }
