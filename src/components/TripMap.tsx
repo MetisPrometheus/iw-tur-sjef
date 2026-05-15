@@ -309,130 +309,112 @@ function anchorOffsetForPin(pin: SelectedPin): number {
 function stopMarkerElement(letter: string, isActive: boolean): HTMLElement {
   const el = document.createElement("button");
   el.type = "button";
-  el.style.cursor = "pointer";
-  el.style.background = "transparent";
-  el.style.border = "0";
-  el.style.padding = "0";
-  el.innerHTML = `
-    <span style="
-      display: grid;
-      place-items: center;
-      width: ${isActive ? 46 : 38}px;
-      height: ${isActive ? 46 : 38}px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, #fcd34d 0%, #c4633c 95%);
-      color: #2a2520;
-      font-weight: 800;
-      font-size: ${isActive ? 17 : 14}px;
-      box-shadow:
-        0 0 0 3px rgba(250,246,239,0.85),
-        0 0 ${isActive ? 36 : 22}px ${isActive ? 9 : 6}px rgba(252,211,77,0.55),
-        0 8px 18px -4px rgba(0,0,0,0.55);
-      font-family: var(--font-fraunces), serif;
-    ">${letter}</span>
-  `;
+  el.setAttribute("aria-label", `Stop ${letter}`);
+  const size = isActive ? 46 : 38;
+  Object.assign(el.style, {
+    ...baseMarkerStyle(size),
+    background: "linear-gradient(135deg, #fcd34d 0%, #c4633c 95%)",
+    color: "#2a2520",
+    fontWeight: "800",
+    fontSize: `${isActive ? 17 : 14}px`,
+    fontFamily: "var(--font-fraunces), serif",
+    boxShadow: `0 0 0 3px rgba(250,246,239,0.85), 0 0 ${isActive ? 36 : 22}px ${isActive ? 9 : 6}px rgba(252,211,77,0.55), 0 8px 18px -4px rgba(0,0,0,0.55)`,
+  } as Partial<CSSStyleDeclaration>);
+  el.textContent = letter;
   return el;
 }
 
-function doneBadge(): string {
-  return `<span style="
-    position: absolute;
-    right: -4px;
-    bottom: -4px;
-    display: grid;
-    place-items: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 999px;
-    background: #10b981;
-    color: white;
-    font-size: 10px;
-    font-weight: 800;
-    border: 2px solid #faf6ef;
-  ">✓</span>`;
+function appendDoneBadge(el: HTMLElement): void {
+  const badge = document.createElement("span");
+  Object.assign(badge.style, {
+    position: "absolute",
+    right: "-4px",
+    bottom: "-4px",
+    display: "grid",
+    placeItems: "center",
+    width: "16px",
+    height: "16px",
+    borderRadius: "999px",
+    background: "#10b981",
+    color: "white",
+    fontSize: "10px",
+    fontWeight: "800",
+    border: "2px solid #faf6ef",
+    lineHeight: "1",
+    pointerEvents: "none",
+  } as Partial<CSSStyleDeclaration>);
+  badge.textContent = "✓";
+  el.appendChild(badge);
+}
+
+function baseMarkerStyle(size: number): Partial<CSSStyleDeclaration> {
+  return {
+    cursor: "pointer",
+    width: `${size}px`,
+    height: `${size}px`,
+    borderRadius: "999px",
+    border: "0",
+    padding: "0",
+    margin: "0",
+    display: "grid",
+    placeItems: "center",
+    boxSizing: "border-box",
+    lineHeight: "1",
+    fontStyle: "normal",
+  };
 }
 
 function hotelMarkerElement(isDone: boolean): HTMLElement {
   const el = document.createElement("button");
   el.type = "button";
-  el.style.cursor = "pointer";
-  el.style.background = "transparent";
-  el.style.border = "0";
-  el.style.padding = "0";
-  el.style.position = "relative";
   el.setAttribute("aria-label", "Hotel");
-  el.innerHTML = `
-    <span style="
-      display: grid;
-      place-items: center;
-      width: 38px;
-      height: 38px;
-      border-radius: 999px;
-      background: #faf6ef;
-      color: #10b981;
-      font-size: 18px;
-      box-shadow:
-        0 0 0 3px #10b981,
-        0 0 0 5px rgba(250,246,239,0.85),
-        0 8px 18px -4px rgba(0,0,0,0.6);
-    ">🛏️</span>
-    ${isDone ? doneBadge() : ""}
-  `;
+  Object.assign(el.style, {
+    ...baseMarkerStyle(38),
+    background: "#faf6ef",
+    color: "#10b981",
+    fontSize: "18px",
+    position: "relative",
+    boxShadow:
+      "0 0 0 3px #10b981, 0 0 0 5px rgba(250,246,239,0.85), 0 8px 18px -4px rgba(0,0,0,0.6)",
+  } as Partial<CSSStyleDeclaration>);
+  el.textContent = "🛏️";
+  if (isDone) appendDoneBadge(el);
   return el;
 }
 
 function savedMarkerElement(category: Category, isDone: boolean): HTMLElement {
   const el = document.createElement("button");
   el.type = "button";
-  el.style.cursor = "pointer";
-  el.style.background = "transparent";
-  el.style.border = "0";
-  el.style.padding = "0";
-  el.style.position = "relative";
   el.setAttribute("aria-label", category);
-  el.innerHTML = `
-    <span style="
-      display: grid;
-      place-items: center;
-      width: 28px;
-      height: 28px;
-      border-radius: 999px;
-      background: ${CATEGORY_COLOR[category]};
-      color: #fff;
-      font-size: 13px;
-      box-shadow:
-        0 0 0 2.5px rgba(250,246,239,0.9),
-        0 4px 12px -2px rgba(0,0,0,0.55);
-    ">${CATEGORY_EMOJI[category]}</span>
-    ${isDone ? doneBadge() : ""}
-  `;
+  Object.assign(el.style, {
+    ...baseMarkerStyle(28),
+    background: CATEGORY_COLOR[category],
+    color: "#fff",
+    fontSize: "13px",
+    position: "relative",
+    boxShadow:
+      "0 0 0 2.5px rgba(250,246,239,0.9), 0 4px 12px -2px rgba(0,0,0,0.55)",
+  } as Partial<CSSStyleDeclaration>);
+  el.textContent = CATEGORY_EMOJI[category];
+  if (isDone) appendDoneBadge(el);
   return el;
 }
 
 function ghostMarkerElement(category: Category, rank: number): HTMLElement {
   const el = document.createElement("button");
   el.type = "button";
-  el.style.cursor = "pointer";
-  el.style.background = "transparent";
-  el.style.border = "0";
-  el.style.padding = "0";
   el.setAttribute("aria-label", `Browse result #${rank}`);
   const color = CATEGORY_COLOR[category];
-  el.innerHTML = `
-    <span style="
-      display: grid;
-      place-items: center;
-      width: 28px;
-      height: 28px;
-      border-radius: 999px;
-      background: ${color};
-      color: white;
-      font-size: 12px;
-      font-weight: 800;
-      font-family: var(--font-fraunces), serif;
-      border: 2.5px solid rgba(250,246,239,0.92);
-      box-shadow: 0 4px 10px -2px rgba(0,0,0,0.5);
-    ">${rank}</span>
-  `;
+  Object.assign(el.style, {
+    ...baseMarkerStyle(28),
+    background: color,
+    color: "white",
+    fontSize: "12px",
+    fontWeight: "800",
+    fontFamily: "var(--font-fraunces), serif",
+    boxShadow:
+      "0 0 0 2.5px rgba(250,246,239,0.92), 0 4px 10px -2px rgba(0,0,0,0.5)",
+  } as Partial<CSSStyleDeclaration>);
+  el.textContent = String(rank);
   return el;
 }
